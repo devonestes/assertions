@@ -146,4 +146,183 @@ defmodule Assertions do
       end
     end
   end
+
+  @doc """
+  Asserts that a `map` with the same values for the given `keys` is in the
+  `list`.
+
+      iex> list = [%{first: :first, second: :second, third: :third}]
+      iex> assert_map_in_list(%{first: :first, second: :second}, list, [:first, :second])
+      true
+
+  """
+  defmacro assert_map_in_list(map, list, keys) do
+    expr =
+      quote do
+        map in list
+      end
+
+    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+
+    quote do
+      list =
+        Enum.map(unquote(list), fn map ->
+          Map.take(map, unquote(keys))
+        end)
+
+      unless Predicates.map_in_list?(unquote(map), list, unquote(keys)) do
+        raise ExUnit.AssertionError,
+          args: [unquote(map), list],
+          left: unquote(map),
+          right: list,
+          expr: unquote(assertion),
+          message: "Map matching the values for keys #{unquote(inspect(keys))} not found"
+      else
+        true
+      end
+    end
+  end
+
+  @doc """
+  Asserts that the values in map `left` and map `right` are the same for the
+  given `keys`
+
+      iex> left = %{first: :first, second: :second, third: :third}
+      iex> right = %{first: :first, second: :second, third: :fourth}
+      iex> assert_maps_equal(left, right, [:first, :second])
+      true
+
+  """
+  defmacro assert_maps_equal(left, right, keys) do
+    expr =
+      quote do
+        nil
+      end
+
+    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+
+    quote do
+      left_diff =
+        unquote(left)
+        |> Map.take(unquote(keys))
+        |> Enum.reject(fn {k, v} -> Map.get(unquote(right), k, :not_found) == v end)
+        |> Map.new()
+
+      right_diff =
+        unquote(right)
+        |> Map.take(unquote(keys))
+        |> Enum.reject(fn {k, v} -> Map.get(unquote(left), k, :not_found) == v end)
+        |> Map.new()
+
+      unless left_diff == %{} and right_diff == %{} do
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Values for #{inspect(unquote(keys))} not equal!"
+      else
+        true
+      end
+    end
+  end
+
+  @doc """
+  Asserts that a `struct` with the same values for the given `keys` is in the
+  `list`.
+
+      iex> list = [DateTime.utc_now(), Date.utc_today()]
+      iex> assert_struct_in_list(DateTime.utc_now(), list, [:year, :month, :day, :second])
+      true
+
+  """
+  defmacro assert_struct_in_list(struct, list, keys) do
+    expr =
+      quote do
+        struct in list
+      end
+
+    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+
+    quote do
+      list =
+        Enum.map(unquote(list), fn map ->
+          Map.take(map, unquote(keys))
+        end)
+
+      unless Predicates.struct_in_list?(unquote(struct), unquote(list), unquote(keys)) do
+        raise ExUnit.AssertionError,
+          args: [unquote(struct), unquote(list)],
+          left: Map.take(unquote(struct), unquote(keys)),
+          right: list,
+          expr: unquote(assertion),
+          message: "Struct matching the values for keys #{unquote(inspect(keys))} not found"
+      else
+        true
+      end
+    end
+  end
+
+  @doc """
+  Asserts that the values in map `left` and map `right` are the same for the
+  given `keys`
+
+      iex> assert_structs_equal(DateTime.utc_now(), DateTime.utc_now(), [:year, :minute])
+      true
+
+  """
+  defmacro assert_structs_equal(left, right, keys) do
+    expr =
+      quote do
+        nil
+      end
+
+    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+
+    quote do
+      keys = [:__struct__ | unquote(keys)]
+
+      left_diff =
+        unquote(left)
+        |> Map.take(unquote(keys))
+        |> Enum.reject(fn {k, v} -> Map.get(unquote(right), k, :not_found) == v end)
+        |> Map.new()
+
+      right_diff =
+        unquote(right)
+        |> Map.take(unquote(keys))
+        |> Enum.reject(fn {k, v} -> Map.get(unquote(left), k, :not_found) == v end)
+        |> Map.new()
+
+      unless left_diff == %{} and right_diff == %{} and
+               unquote(left).__struct__ == unquote(right).__struct__ do
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Values for #{inspect(Map.keys(left_diff))} not equal!"
+      else
+        true
+      end
+    end
+  end
+
+  # defmacro assert_all_have_value(list, key, value) do
+  # end
+
+  # defmacro assert_changes_file(path, comparison, do: block) do
+  # end
+
+  # defmacro assert_creates_file(path, do: block) do
+  # end
+
+  # defmacro assert_deletes_file(path, do: block) do
+  # end
+
+  # defmacro assert_receive_exactly(expected_patterns, timeout \\ 100) do
+  # end
+
+  # defmacro assert_receive_only(expected_pattern, timeout \\ 100) do
+  # end
 end

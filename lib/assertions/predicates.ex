@@ -165,7 +165,15 @@ defmodule Assertions.Predicates do
   end
 
   @doc """
-  Tests if `struct` is in the given `list` by checking the values of the `keys`.
+  Tests if `struct` is in the given `list` by checking the values of the given
+  `keys`.
+
+    ## Examples
+
+      iex> list = [DateTime.utc_now(), Date.utc_today()]
+      iex> assert struct_in_list?(DateTime.utc_now(), list, [:year, :month, :day, :second])
+      true
+
   """
   def struct_in_list?(struct, list, keys) do
     keys = [:__struct__ | keys]
