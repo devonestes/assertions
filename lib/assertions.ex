@@ -15,18 +15,33 @@ defmodule Assertions do
       iex>   assert_lists_equal([1,2,4], [1,3,2])
       iex> rescue
       iex>   error in [ExUnit.AssertionError] ->
-      iex>     assert error.message == "Comparison of each element with `==` failed!"
+      iex>     assert error.message == "Comparison of each element failed!"
       iex> end
       true
 
   """
   defmacro assert_lists_equal(left, right) do
-    quote do
-      assert_lists_equal(
-        unquote(left),
-        unquote(right),
-        "Comparison of each element with `==` failed!"
+    assertion =
+      assertion(
+        quote do
+          assert_lists_equal(unquote(left), unquote(right))
+        end
       )
+
+    {left_diff, right_diff, equal?} = compare_lists(left, right, &Kernel.==/2)
+
+    if equal? do
+      true
+    else
+      quote do
+        raise(
+          [unquote(left), unquote(right)],
+          unquote(left_diff),
+          unquote(right_diff),
+          unquote(assertion),
+          "Comparison of each element failed!"
+        )
+      end
     end
   end
 
@@ -66,66 +81,83 @@ defmodule Assertions do
 
   """
   defmacro assert_lists_equal(left, right, message) when is_binary(message) do
-    left_diff = Predicates.compare(right, left, &Kernel.==/2)
-    right_diff = Predicates.compare(left, right, &Kernel.==/2)
+    assertion =
+      assertion(
+        quote do
+          assert_lists_equal(unquote(left), unquote(right), unquote(message))
+        end
+      )
 
-    expr =
-      quote do
-        left_diff == right_diff
-      end
+    {left_diff, right_diff, equal?} = compare_lists(left, right, &Kernel.==/2)
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
-
-    # This can only happen if both are empty lists
-    unless left_diff == right_diff do
-      quote do
-        raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right)],
-          left: unquote(left_diff),
-          right: unquote(right_diff),
-          expr: unquote(assertion),
-          message: unquote(message)
-      end
-    else
+    if equal? do
       true
+    else
+      quote do
+        raise(
+          [unquote(left), unquote(right), unquote(message)],
+          unquote(left_diff),
+          unquote(right_diff),
+          unquote(assertion),
+          unquote(message)
+        )
+      end
     end
   end
 
   defmacro assert_lists_equal(left, right, comparison) do
-    expr =
-      quote do
-        left_diff == right_diff
-      end
+    assertion =
+      assertion(
+        quote do
+          assert_lists_equal(unquote(left), unquote(right), unquote(comparison))
+        end
+      )
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+    result = compare_lists(left, right, comparison)
 
     quote do
-      comparison = unquote(comparison)
-      left = unquote(left)
-      right = unquote(right)
-      left_diff = Predicates.compare(right, left, comparison)
-      right_diff = Predicates.compare(left, right, comparison)
+      {left_diff, right_diff, equal?} = unquote(result)
 
-      unless left_diff == right_diff do
-        raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right)],
-          left: left_diff,
-          right: right_diff,
-          expr: unquote(assertion),
-          message: "Comparison of each element with `#{inspect(unquote(comparison))}` failed!"
-      else
+      if equal? do
         true
+      else
+        raise(
+          [unquote(left), unquote(right), unquote(comparison)],
+          left_diff,
+          right_diff,
+          unquote(assertion),
+          "Comparison of each element failed!"
+        )
       end
     end
+
+    # quote do
+    # comparison = unquote(comparison)
+    # left = unquote(left)
+    # right = unquote(right)
+    # left_diff = Predicates.compare(right, left, comparison)
+    # right_diff = Predicates.compare(left, right, comparison)
+
+    # if left_diff == right_diff do
+    # true
+    # else
+    # raise ExUnit.AssertionError,
+    # args: [left, right, comparison],
+    # left: left_diff,
+    # right: right_diff,
+    # expr: unquote(assertion),
+    # message: "Comparison of each element failed!"
+    # end
+    # end
   end
 
   defmacro assert_lists_equal(left, right, comparison, message) do
     expr =
       quote do
-        left_diff == right_diff
+        assert_lists_equal(unquote(left), unquote(right), unquote(comparison), unquote(message))
       end
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+    assertion = Macro.escape(expr, prune_metadata: true)
 
     quote do
       comparison = unquote(comparison)
@@ -136,7 +168,7 @@ defmodule Assertions do
 
       unless left_diff == right_diff do
         raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right)],
+          args: [unquote(left), unquote(right), unquote(comparison), unquote(message)],
           left: left_diff,
           right: right_diff,
           expr: unquote(assertion),
@@ -159,24 +191,29 @@ defmodule Assertions do
   defmacro assert_map_in_list(map, list, keys) do
     expr =
       quote do
-        map in list
+        assert_map_in_list(map, list, keys)
       end
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+    assertion = Macro.escape(expr, prune_metadata: true)
 
     quote do
+      keys = unquote(keys)
+      keys_for_message = unquote(stringify_list(keys))
+
       list =
         Enum.map(unquote(list), fn map ->
           Map.take(map, unquote(keys))
         end)
 
+      map = Map.take(unquote(map), unquote(keys))
+
       unless Predicates.map_in_list?(unquote(map), list, unquote(keys)) do
         raise ExUnit.AssertionError,
-          args: [unquote(map), list],
-          left: unquote(map),
+          args: [unquote(map), unquote(list)],
+          left: map,
           right: list,
           expr: unquote(assertion),
-          message: "Map matching the values for keys #{unquote(inspect(keys))} not found"
+          message: "Map matching the values for keys `#{keys_for_message}` not found"
       else
         true
       end
@@ -196,10 +233,10 @@ defmodule Assertions do
   defmacro assert_maps_equal(left, right, keys) do
     expr =
       quote do
-        nil
+        assert_maps_equal(left, right, keys)
       end
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+    assertion = Macro.escape(expr, prune_metadata: true)
 
     quote do
       left_diff =
@@ -239,10 +276,10 @@ defmodule Assertions do
   defmacro assert_struct_in_list(struct, list, keys) do
     expr =
       quote do
-        struct in list
+        assert_struct_in_list(struct, list, keys)
       end
 
-    assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
+    assertion = Macro.escape(expr, prune_metadata: true)
 
     quote do
       list =
@@ -274,7 +311,7 @@ defmodule Assertions do
   defmacro assert_structs_equal(left, right, keys) do
     expr =
       quote do
-        nil
+        assert_structs_equal(left, right, keys)
       end
 
     assertion = Macro.escape({:assert, [], [expr]}, prune_metadata: true)
@@ -306,6 +343,50 @@ defmodule Assertions do
         true
       end
     end
+  end
+
+  defp compare_lists(left, right, comparison) when is_function(comparison, 2) do
+    left_diff = Predicates.compare(right, left, comparison)
+    right_diff = Predicates.compare(left, right, comparison)
+    {left_diff, right_diff, left_diff == right_diff}
+  end
+
+  defp compare_lists(left, right, comparison) do
+    quote do
+      left = unquote(left)
+      right = unquote(right)
+      comparison = unquote(comparison)
+      left_diff = Predicates.compare(right, left, comparison)
+      right_diff = Predicates.compare(left, right, comparison)
+      {left_diff, right_diff, left_diff == right_diff}
+    end
+  end
+
+  defp assertion(quoted) do
+    Macro.escape(quoted, prune_metadata: true)
+  end
+
+  defp stringify_list(list) do
+    quote do
+      unquote(list)
+      |> Enum.map(fn
+        elem when is_atom(elem) -> ":#{elem}"
+        elem when is_binary(elem) -> "\"#{elem}\""
+        elem -> "#{inspect(elem)}"
+      end)
+      |> Enum.join(", ")
+    end
+  end
+
+  # public because we're calling it from inside a macro
+  @doc false
+  def raise(args, left, right, expr, message) do
+    raise ExUnit.AssertionError,
+      args: args,
+      left: left,
+      right: right,
+      expr: expr,
+      message: message
   end
 
   # defmacro assert_all_have_value(list, key, value) do

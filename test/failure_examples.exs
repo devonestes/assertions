@@ -30,19 +30,34 @@ defmodule Assertions.FailureExamples do
 
   describe "assert_lists_equal/4" do
     test "fails" do
-      assert_lists_equal(
-        ["cat"],
-        ["lion"],
-        &(String.length(&1) == String.length(&2)),
-        "Not the same length!"
-      )
+      left = ["cat"]
+      right = ["lion"]
+      comparison = &(String.length(&1) == String.length(&2))
+      message = "Not the same length!"
+      assert_lists_equal(left, right, comparison, message)
     end
   end
 
   describe "assert_map_in_list/3" do
-    test "fails" do
-      list = [%{first: :first, second: :third, third: :fourth}]
-      assert_map_in_list(%{first: :first, second: :second}, list, [:first, :second])
+    test "fails with atom keys" do
+      map = %{first: :first, second: :second, not: :used, keys: :are, always: :pruned}
+      list = [%{first: :first, second: :third, third: :fourth, a: :b, d: :e}]
+      keys = [:first, :second]
+      assert_map_in_list(map, list, keys)
+    end
+
+    test "fails with string keys" do
+      map = %{"first" => :first, "second" => :second}
+      list = [%{"first" => :first, "second" => :third}]
+      keys = ["first", "second"]
+      assert_map_in_list(map, list, keys)
+    end
+
+    test "fails with list keys" do
+      map = %{["first"] => :first, ["second"] => :second}
+      list = [%{["first"] => :first, ["second"] => :third}]
+      keys = [["first"], ["second"]]
+      assert_map_in_list(map, list, keys)
     end
   end
 
