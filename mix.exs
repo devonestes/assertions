@@ -4,7 +4,7 @@ defmodule Assertions.MixProject do
   def project do
     [
       app: :assertions,
-      version: "0.6.0-dev",
+      version: "0.6.0",
       elixir: "~> 1.5",
       deps: [{:ex_doc, "~> 0.19", only: :dev, runtime: false}],
       description: description(),

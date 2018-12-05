@@ -28,16 +28,16 @@ defmodule Assertions do
         end
       )
 
-    {left_diff, right_diff, equal?} = compare_lists(left, right, &Kernel.==/2)
+    quote do
+      {left_diff, right_diff, equal?} = compare_lists(unquote(left), unquote(right), &Kernel.==/2)
 
-    if equal? do
-      true
-    else
-      quote do
+      if equal? do
+        true
+      else
         raise(
           [unquote(left), unquote(right)],
-          unquote(left_diff),
-          unquote(right_diff),
+          left_diff,
+          right_diff,
           unquote(assertion),
           "Comparison of each element failed!"
         )
@@ -345,13 +345,15 @@ defmodule Assertions do
     end
   end
 
-  defp compare_lists(left, right, comparison) when is_function(comparison, 2) do
+  @doc false
+  def compare_lists(left, right, comparison)
+       when is_function(comparison, 2) and is_list(left) and is_list(right) do
     left_diff = Predicates.compare(right, left, comparison)
     right_diff = Predicates.compare(left, right, comparison)
     {left_diff, right_diff, left_diff == right_diff}
   end
 
-  defp compare_lists(left, right, comparison) do
+  def compare_lists(left, right, comparison) do
     quote do
       left = unquote(left)
       right = unquote(right)
