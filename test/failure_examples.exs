@@ -8,7 +8,7 @@ defmodule Assertions.FailureExamples do
 
   @path Path.expand("../tmp/file.txt", __DIR__)
 
-  use Assertions.Case, async: true
+  use Assertions.Case
 
   setup do
     on_exit(fn ->
@@ -176,36 +176,4 @@ defmodule Assertions.FailureExamples do
       assert_receive_only(:hello)
     end
   end
-
-  # describe "assert_receive_exactly/2" do
-  # test "fails if no message is received after timeout" do
-  # pattern = :hello
-  # assert_receive_exactly([^pattern], 1)
-  # end
-
-  # test "fails if an unexpected message is received" do
-  # send(self(), :hello)
-  # send(self(), :guten_tag)
-  # send(self(), :hi)
-  # assert_receive_exactly([:hello, :hi])
-  # end
-
-  # test "fails if not all messages are received" do
-  # send(self(), :hello)
-  # assert_receive_exactly([:hello, :hi])
-  # end
-
-  # test "fails if messages are received out of order" do
-  # send(self(), :hi)
-  # send(self(), :hello)
-  # assert_receive_exactly([:hello, :hi])
-  # end
-
-  # test "fails if an unexpected message comes last but before the call" do
-  # send(self(), :hello)
-  # send(self(), :hi)
-  # send(self(), :guten_tag)
-  # assert_receive_exactly([:hello, _])
-  # end
-  # end
 end

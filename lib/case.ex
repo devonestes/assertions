@@ -9,8 +9,6 @@ defmodule Assertions.Case do
     quote do
       require Assertions
       import Assertions
-      require Assertions.Predicates
-      import Assertions.Predicates
     end
   end
 end

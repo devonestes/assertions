@@ -3,8 +3,6 @@ defmodule Assertions do
   Helpful assertions with great error messages to help you write better tests.
   """
 
-  alias Assertions.Predicates
-
   @type comparison :: (any, any -> boolean)
 
   @doc """
@@ -174,7 +172,7 @@ defmodule Assertions do
       list = Enum.map(unquote(list), &Map.take(&1, keys))
       map = Map.take(unquote(map), keys)
 
-      unless Predicates.map_in_list?(map, list, keys) do
+      unless map in list do
         raise ExUnit.AssertionError,
           args: [unquote(map), unquote(list)],
           left: map,
@@ -264,7 +262,7 @@ defmodule Assertions do
       struct = Map.take(unquote(struct), keys)
       list = Enum.map(unquote(list), fn map -> Map.take(map, keys) end)
 
-      if Predicates.struct_in_list?(struct, list, keys) do
+      if struct in list do
         true
       else
         raise(
@@ -612,20 +610,20 @@ defmodule Assertions do
 
   """
   @spec assert_receive_only(Macro.expr(), non_neg_integer) :: any | no_return
-  defmacro assert_receive_only(original_pattern, timeout \\ 100) do
-    binary = Macro.to_string(original_pattern)
+  defmacro assert_receive_only(pattern, timeout \\ 100) do
+    binary = Macro.to_string(pattern)
 
     assertion =
       assertion(
         quote do
-          assert_receive_only(unquote(original_pattern), unquote(timeout))
+          assert_receive_only(unquote(pattern), unquote(timeout))
         end
       )
 
     caller = __CALLER__
 
     # Expand before extracting metadata
-    pattern = expand_pattern(original_pattern, caller)
+    pattern = expand_pattern(pattern, caller)
     vars = collect_vars_from_pattern(pattern)
     pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
 
@@ -709,107 +707,6 @@ defmodule Assertions do
     end
   end
 
-  # @doc """
-  # Asserts that messages matching `expected_patterns`, and only those messages,
-  # are received in the same order as in `expected_patterns` within the given
-  # `timeout`, specified in milliseconds.
-
-  # The default timeout is 100 milliseconds.
-
-  ## Examples
-
-  # iex> send(self(), :hello)
-  # iex> send(self(), :hello_again)
-  # iex> send(self(), :goodbye)
-  # iex> assert_receive_exactly([:hello, :hello_again, :goodbye])
-  # true
-
-  # iex> send(self(), :hello)
-  # iex> Process.send_after(self(), :hello_again, 50)
-  # iex> assert_receive_exactly([:hello, :hello_again])
-  # true
-
-  # iex> hello = :hello
-  # iex> send(self(), hello)
-  # iex> send(self(), :hello_again)
-  # iex> assert_receive_exactly([^hello, :hello_again])
-  # true
-
-  # iex> send(self(), :hello)
-  # iex> send(self(), :hello_again)
-  # iex> assert_receive_exactly([hello, :hello_again])
-  # iex> hello
-  # :hello
-
-  # """
-  # @spec assert_receive_exactly([Macro.expr()], non_neg_integer) :: true | no_return
-  # defmacro assert_receive_exactly(pattern, timeout \\ 100) do
-  # IO.inspect(pattern)
-  # caller = __CALLER__
-  # binary = Macro.to_string(pattern)
-
-  # Expand before extracting metadata
-  # pattern = expand_pattern(pattern, caller)
-  # vars = collect_vars_from_pattern(pattern)
-  # pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
-
-  # pattern =
-  # case pattern do
-  # {:when, meta, [left, right]} ->
-  # {:when, meta, [quote(do: unquote(left) = received), right]}
-
-  # left ->
-  # quote(do: unquote(left) = received)
-  # end
-
-  # quoted_pattern =
-  # quote do
-  # case message do
-  # unquote(pattern) ->
-  # _ = unquote(vars)
-  # true
-
-  # _ ->
-  # false
-  # end
-  # end
-
-  # pattern_finder =
-  # quote do
-  # fn message ->
-  # unquote(suppress_warning(quoted_pattern))
-  # end
-  # end
-
-  # timeout =
-  # if is_integer(timeout) do
-  # timeout
-  # else
-  # quote do: ExUnit.Assertions.__timeout__(unquote(timeout))
-  # end
-
-  # failure_message =
-  # quote do
-  # ExUnit.Assertions.__timeout__(
-  # unquote(binary),
-  # unquote(pins),
-  # unquote(pattern_finder),
-  # timeout
-  # )
-  # end
-
-  # quote do
-  # timeout = unquote(timeout)
-
-  # {received, unquote(vars)} =
-  # receive do
-  # unquote(pattern) -> {received, unquote(vars)}
-  # after
-  # timeout -> flunk(unquote(failure_message))
-  # end
-  # end
-  # end
-
   @doc false
   def compare_maps(left, right) do
     {left_diff, right_diff, equal?} =
@@ -821,8 +718,8 @@ defmodule Assertions do
   @doc false
   def compare_lists(left, right, comparison)
       when is_function(comparison, 2) and is_list(left) and is_list(right) do
-    left_diff = Predicates.compare(right, left, comparison)
-    right_diff = Predicates.compare(left, right, comparison)
+    left_diff = compare(right, left, comparison)
+    right_diff = compare(left, right, comparison)
     {left_diff, right_diff, left_diff == right_diff}
   end
 
@@ -831,10 +728,19 @@ defmodule Assertions do
       left = unquote(left)
       right = unquote(right)
       comparison = unquote(comparison)
-      left_diff = Predicates.compare(right, left, comparison)
-      right_diff = Predicates.compare(left, right, comparison)
+      left_diff = compare(right, left, comparison)
+      right_diff = compare(left, right, comparison)
       {left_diff, right_diff, left_diff == right_diff}
     end
+  end
+
+  defp compare(left, right, comparison) do
+    Enum.reduce(left, right, fn left_element, list ->
+      case Enum.find_index(list, &comparison.(left_element, &1)) do
+        nil -> list
+        index -> List.delete_at(list, index)
+      end
+    end)
   end
 
   defp assertion(quoted), do: Macro.escape(quoted, prune_metadata: true)
