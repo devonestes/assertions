@@ -41,13 +41,17 @@ defmodule AssertionsTest do
       end
 
       output = run_tests()
+
       assert output =~ "Comparison of each element failed!"
 
       assert output =~
                "assert_lists_equal(left, right, &(String.length(&1) == String.length(&2)))"
 
       assert output =~
-               "arguments:\e[0m\n\n         # 1\n         [\"dog\", \"cat\"]\n\n         # 2\n         [\"lion\", \"dog\"]\n\n         # 3\n         #Function<1.79374689/2 in AssertionsTest.AssertListsEqual.Three.\"test fails with comparison\"/1>\n\n     \e[36mleft:  \e[0m[\e[31m\"cat\"\e[0m]\n     \e[36mright: \e[0m[\e[32m\"lion\"\e[0m]"
+               "arguments:\e[0m\n\n         # 1\n         [\"dog\", \"cat\"]\n\n         # 2\n         [\"lion\", \"dog\"]\n\n         # 3\n         #Function<"
+
+      assert output =~
+               "\e[36mleft:  \e[0m[\e[31m\"cat\"\e[0m]\n     \e[36mright: \e[0m[\e[32m\"lion\"\e[0m]"
 
       assert output =~ "Not actually equal!"
       assert output =~ "assert_lists_equal([1, 2, 3], [1, 4, 2], \"Not actually equal!\")"

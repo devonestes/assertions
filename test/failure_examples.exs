@@ -6,10 +6,14 @@ defmodule Assertions.FailureExamples do
   `ExUnit.Console` formatter.
   """
 
+  @path Path.expand("../tmp/file.txt", __DIR__)
+
   use Assertions.Case, async: true
 
-  defmodule User do
-    defstruct [:id, :name, :age, :address]
+  setup do
+    on_exit(fn ->
+      File.rm_rf(Path.dirname(@path))
+    end)
   end
 
   describe "assert_lists_equal/2" do
@@ -72,8 +76,13 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_struct_in_list/3" do
-    test "fails" do
-      assert_struct_in_list(DateTime.utc_now(), [Date.utc_today()], [:year, :month, :second])
+    test "fails with struct/keys/list" do
+      assert_struct_in_list(DateTime.utc_now(), [:year, :month], [Date.utc_today()])
+    end
+
+    test "fails with map/module/list" do
+      map = Map.take(DateTime.utc_now(), [:year, :month])
+      assert_struct_in_list(map, DateTime, [Date.utc_today()])
     end
   end
 
@@ -84,6 +93,63 @@ defmodule Assertions.FailureExamples do
         DateTime.utc_now(),
         [:year, :month, :millisecond, :microsecond]
       )
+    end
+  end
+
+  describe "assert_all_have_value/3" do
+    test "fails" do
+      list = [
+        %{key: :value, other: :pair},
+        %{key: :pair, other: :value},
+        [key: :list, other: :keyword]
+      ]
+
+      assert_all_have_value(list, :key, :value)
+    end
+  end
+
+  describe "assert_changes_file/3" do
+    test "fails when the file doesn't exist" do
+      assert_changes_file(@path, "hi", File.write(@path, "hi"))
+    end
+
+    test "fails when the file matches before the expression is executed" do
+      File.mkdir_p!(Path.dirname(@path))
+      File.write(@path, "hi there, I'm pre-existing.")
+      assert_changes_file(@path, "hi", File.write(@path, "hi"))
+    end
+
+    test "fails when the file doesn't exist after the expression is executed" do
+      assert_changes_file(@path, "hi", File.mkdir_p!(Path.dirname(@path)))
+    end
+
+    test "fails when the file doesn't match the comparison" do
+      File.mkdir_p!(Path.dirname(@path))
+      assert_changes_file(@path, "guten Tag", File.write(@path, "hi"))
+    end
+  end
+
+  describe "assert_creates_file/2" do
+    test "fails when the file exists before the function" do
+      File.mkdir_p!(Path.dirname(@path))
+      File.write(@path, "hi")
+      assert_creates_file(@path, File.write(@path, "hi"))
+    end
+
+    test "fails when the file doesn't exist after the function" do
+      assert_creates_file(@path, File.mkdir_p!(Path.dirname(@path)))
+    end
+  end
+
+  describe "assert_deletes_file/2" do
+    test "fails when the file doesn't exist before the function" do
+      assert_deletes_file(@path, File.mkdir_p!(Path.dirname(@path)))
+    end
+
+    test "fails when the file exists after the function" do
+      File.mkdir_p!(Path.dirname(@path))
+      File.write(@path, "hi there")
+      assert_deletes_file(@path, File.write(@path, "I'm pre-existing."))
     end
   end
 end

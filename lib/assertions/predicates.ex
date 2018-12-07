@@ -155,14 +155,14 @@ defmodule Assertions.Predicates do
     Map.get(map, key, {:error, :key_not_found_for_assertion})
   end
 
-  #defmacro changes_file?(path, comparison, do: block) do
-  #end
+  # defmacro changes_file?(path, comparison, do: block) do
+  # end
 
-  #defmacro creates_file?(path, do: block) do
-  #end
+  # defmacro creates_file?(path, do: block) do
+  # end
 
-  #defmacro deletes_file?(path, do: block) do
-  #end
+  # defmacro deletes_file?(path, do: block) do
+  # end
 
   @doc """
   Tests if `struct` is in the given `list` by checking the values of the given
@@ -175,6 +175,10 @@ defmodule Assertions.Predicates do
       true
 
   """
+  def struct_in_list?(struct, [:__struct__ | _] = list, keys) do
+    map_in_list?(struct, list, keys)
+  end
+
   def struct_in_list?(struct, list, keys) do
     keys = [:__struct__ | keys]
     map_in_list?(struct, list, keys)
