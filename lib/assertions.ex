@@ -1,6 +1,6 @@
 defmodule Assertions do
   @moduledoc """
-  Helpful functions to help you write better tests.
+  Helpful assertions with great error messages to help you write better tests.
   """
 
   alias Assertions.Predicates
@@ -344,8 +344,8 @@ defmodule Assertions do
   end
 
   @doc """
-  Asserts that the value for all maps, structs or keyword lists in `list` have
-  the same `value` for `key`.
+  Asserts that all maps, structs or keyword lists in `list` have the same
+  `value` for `key`.
 
       iex> assert_all_have_value([%{key: :value}, %{key: :value, other: :key}], :key, :value)
       true
@@ -556,10 +556,258 @@ defmodule Assertions do
     end
   end
 
-  # defmacro assert_receive_exactly(expected_patterns, timeout \\ 100) do
+  @doc """
+  Tests that a message matching the given `pattern`, and only that message, is
+  received before the given `timeout`, specified in milliseconds.
+
+  The optional second argument is a timeout for the `receive` to wait for the
+  expected message, and defaults to 100ms.
+
+  If you want to check that no message was received before the expected message,
+  **and** that no message is received for a given time after calling
+  `receive_only?/2`, you can combine `received_only?/2` with
+  `ExUnit.Assertions.refute_receive/3`.
+
+      assert_receive_only(:hello)
+      refute_receive _, 100
+
+  ## Examples
+
+      iex> send(self(), :hello)
+      iex> assert_receive_only(:hello)
+      true
+
+      iex> send(self(), [:hello])
+      iex> assert_receive_only([_])
+      true
+
+      iex> a = :hello
+      iex> send(self(), :hello)
+      iex> assert_receive_only(^a)
+      true
+
+      iex> send(self(), :hello)
+      iex> assert_receive_only(a when is_atom(a))
+      iex> a
+      :hello
+
+      iex> send(self(), %{key: :value})
+      iex> assert_receive_only(%{key: value} when is_atom(value))
+      iex> value
+      :value
+
+  If a message is received after the function has matched a message to the given
+  pattern, but the second message is received before the timeout, that second
+  message is ignored and the function returns `true`.
+
+  This assertion only tests that the message that matches the given pattern was
+  the first message in the process inbox, and that nothing was sent between the
+  sending the message that matches the pattern and when `receive_only?/2` was
+  called.
+
+      iex> Process.send_after(self(), :hello, 20)
+      iex> Process.send_after(self(), :hello_again, 50)
+      iex> assert_receive_only(:hello, 100)
+      true
+
+  """
+  @spec assert_receive_only(Macro.expr(), non_neg_integer) :: any | no_return
+  defmacro assert_receive_only(original_pattern, timeout \\ 100) do
+    binary = Macro.to_string(original_pattern)
+
+    assertion =
+      assertion(
+        quote do
+          assert_receive_only(unquote(original_pattern), unquote(timeout))
+        end
+      )
+
+    caller = __CALLER__
+
+    # Expand before extracting metadata
+    pattern = expand_pattern(original_pattern, caller)
+    vars = collect_vars_from_pattern(pattern)
+    pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
+
+    pattern =
+      case pattern do
+        {:when, meta, [left, right]} ->
+          {:when, meta, [quote(do: unquote(left) = received), right]}
+
+        left ->
+          quote(do: unquote(left) = received)
+      end
+
+    quoted_pattern =
+      quote do
+        case message do
+          unquote(pattern) ->
+            _ = unquote(vars)
+            true
+
+          _ ->
+            false
+        end
+      end
+
+    pattern_finder =
+      quote do
+        fn message ->
+          unquote(suppress_warning(quoted_pattern))
+        end
+      end
+
+    timeout =
+      if is_integer(timeout) do
+        timeout
+      else
+        quote do: ExUnit.Assertions.__timeout__(unquote(timeout))
+      end
+
+    failure_message =
+      quote do
+        ExUnit.Assertions.__timeout__(
+          unquote(binary),
+          unquote(pins),
+          unquote(pattern_finder),
+          timeout
+        )
+      end
+
+    bind_variables =
+      quote do
+        {received, unquote(vars)}
+      end
+
+    quote do
+      timeout = unquote(timeout)
+
+      unquote(bind_variables) =
+        receive do
+          unquote(pattern) ->
+            result = unquote(bind_variables)
+
+            receive do
+              thing ->
+                raise ExUnit.AssertionError,
+                  expr: unquote(assertion),
+                  message: "`#{inspect(thing)}` was also in the mailbox"
+            after
+              0 ->
+                result
+            end
+
+          random_thing ->
+            raise ExUnit.AssertionError,
+              expr: unquote(assertion),
+              message: "Received unexpected message: `#{inspect(random_thing)}`"
+        after
+          timeout -> flunk(unquote(failure_message))
+        end
+
+      true
+    end
+  end
+
+  # @doc """
+  # Asserts that messages matching `expected_patterns`, and only those messages,
+  # are received in the same order as in `expected_patterns` within the given
+  # `timeout`, specified in milliseconds.
+
+  # The default timeout is 100 milliseconds.
+
+  ## Examples
+
+  # iex> send(self(), :hello)
+  # iex> send(self(), :hello_again)
+  # iex> send(self(), :goodbye)
+  # iex> assert_receive_exactly([:hello, :hello_again, :goodbye])
+  # true
+
+  # iex> send(self(), :hello)
+  # iex> Process.send_after(self(), :hello_again, 50)
+  # iex> assert_receive_exactly([:hello, :hello_again])
+  # true
+
+  # iex> hello = :hello
+  # iex> send(self(), hello)
+  # iex> send(self(), :hello_again)
+  # iex> assert_receive_exactly([^hello, :hello_again])
+  # true
+
+  # iex> send(self(), :hello)
+  # iex> send(self(), :hello_again)
+  # iex> assert_receive_exactly([hello, :hello_again])
+  # iex> hello
+  # :hello
+
+  # """
+  # @spec assert_receive_exactly([Macro.expr()], non_neg_integer) :: true | no_return
+  # defmacro assert_receive_exactly(pattern, timeout \\ 100) do
+  # IO.inspect(pattern)
+  # caller = __CALLER__
+  # binary = Macro.to_string(pattern)
+
+  # Expand before extracting metadata
+  # pattern = expand_pattern(pattern, caller)
+  # vars = collect_vars_from_pattern(pattern)
+  # pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
+
+  # pattern =
+  # case pattern do
+  # {:when, meta, [left, right]} ->
+  # {:when, meta, [quote(do: unquote(left) = received), right]}
+
+  # left ->
+  # quote(do: unquote(left) = received)
   # end
 
-  # defmacro assert_receive_only(expected_pattern, timeout \\ 100) do
+  # quoted_pattern =
+  # quote do
+  # case message do
+  # unquote(pattern) ->
+  # _ = unquote(vars)
+  # true
+
+  # _ ->
+  # false
+  # end
+  # end
+
+  # pattern_finder =
+  # quote do
+  # fn message ->
+  # unquote(suppress_warning(quoted_pattern))
+  # end
+  # end
+
+  # timeout =
+  # if is_integer(timeout) do
+  # timeout
+  # else
+  # quote do: ExUnit.Assertions.__timeout__(unquote(timeout))
+  # end
+
+  # failure_message =
+  # quote do
+  # ExUnit.Assertions.__timeout__(
+  # unquote(binary),
+  # unquote(pins),
+  # unquote(pattern_finder),
+  # timeout
+  # )
+  # end
+
+  # quote do
+  # timeout = unquote(timeout)
+
+  # {received, unquote(vars)} =
+  # receive do
+  # unquote(pattern) -> {received, unquote(vars)}
+  # after
+  # timeout -> flunk(unquote(failure_message))
+  # end
+  # end
   # end
 
   @doc false
@@ -612,5 +860,68 @@ defmodule Assertions do
       right: right,
       expr: expr,
       message: message
+  end
+
+  defp expand_pattern({:when, meta, [left, right]}, caller) do
+    left = expand_pattern_except_vars(left, Macro.Env.to_match(caller))
+    right = expand_pattern_except_vars(right, %{caller | context: :guard})
+    {:when, meta, [left, right]}
+  end
+
+  defp expand_pattern(expr, caller) do
+    expand_pattern_except_vars(expr, Macro.Env.to_match(caller))
+  end
+
+  defp expand_pattern_except_vars(expr, caller) do
+    Macro.prewalk(expr, fn
+      {var, _, context} = node when is_atom(var) and is_atom(context) -> node
+      other -> Macro.expand(other, caller)
+    end)
+  end
+
+  defp collect_vars_from_pattern(expr) do
+    Macro.prewalk(expr, [], fn
+      {:::, _, [left, _]}, acc ->
+        {[left], acc}
+
+      {skip, _, [_]}, acc when skip in [:^, :@] ->
+        {:ok, acc}
+
+      {:_, _, context}, acc when is_atom(context) ->
+        {:ok, acc}
+
+      {name, meta, context}, acc when is_atom(name) and is_atom(context) ->
+        {:ok, [{name, [generated: true] ++ meta, context} | acc]}
+
+      node, acc ->
+        {node, acc}
+    end)
+    |> elem(1)
+  end
+
+  defp collect_pins_from_pattern(expr, vars) do
+    {_, pins} =
+      Macro.prewalk(expr, [], fn
+        {:^, _, [{name, _, nil} = var]}, acc ->
+          if {name, nil} in vars do
+            {:ok, [{name, var} | acc]}
+          else
+            {:ok, acc}
+          end
+
+        form, acc ->
+          {form, acc}
+      end)
+
+    Enum.uniq_by(pins, &elem(&1, 0))
+  end
+
+  defp suppress_warning({name, meta, [expr, [do: clauses]]}) do
+    clauses =
+      Enum.map(clauses, fn {:->, meta, args} ->
+        {:->, [generated: true] ++ meta, args}
+      end)
+
+    {name, meta, [expr, [do: clauses]]}
   end
 end

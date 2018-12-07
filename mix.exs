@@ -4,7 +4,7 @@ defmodule Assertions.MixProject do
   def project do
     [
       app: :assertions,
-      version: "0.7.0",
+      version: "0.8.0",
       elixir: "~> 1.5",
       deps: [{:ex_doc, "~> 0.19", only: :dev, runtime: false}],
       description: description(),
@@ -24,7 +24,7 @@ defmodule Assertions.MixProject do
   end
 
   defp description do
-    "Helpful functions for writing better tests."
+    "Helpful functions with great error messages to help you write better tests."
   end
 
   defp package do
