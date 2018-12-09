@@ -28,13 +28,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          "Comparison of each element failed!"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Comparison of each element failed!"
       end
     end
   end
@@ -70,13 +69,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right), unquote(message)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          unquote(message)
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right), unquote(message)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: unquote(message)
       end
     end
   end
@@ -96,13 +94,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right), unquote(comparison)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          "Comparison of each element failed!"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right), unquote(comparison)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Comparison of each element failed!"
       end
     end
   end
@@ -138,13 +135,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right), unquote(comparison), unquote(message)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          unquote(message)
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right), unquote(comparison), unquote(message)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: unquote(message)
       end
     end
   end
@@ -212,13 +208,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          "Values for #{unquote(stringify_list(keys))} not equal!"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Values for #{unquote(stringify_list(keys))} not equal!"
       end
     end
   end
@@ -265,13 +260,12 @@ defmodule Assertions do
       if struct in list do
         true
       else
-        raise(
-          [unquote(struct), unquote(keys), unquote(list)],
-          struct,
-          list,
-          unquote(assertion),
-          "Struct matching the values for keys #{unquote(stringify_list(keys))} not found"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(struct), unquote(keys), unquote(list)],
+          left: struct,
+          right: list,
+          expr: unquote(assertion),
+          message: "Struct matching the values for keys #{unquote(stringify_list(keys))} not found"
       end
     end
   end
@@ -292,13 +286,12 @@ defmodule Assertions do
       if map in list do
         true
       else
-        raise(
-          [unquote(map), unquote(module), unquote(list)],
-          map,
-          list,
-          unquote(assertion),
-          "Struct matching #{inspect(map)} not found"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(map), unquote(module), unquote(list)],
+          left: map,
+          right: list,
+          expr: unquote(assertion),
+          message: "Struct matching #{inspect(map)} not found"
       end
     end
   end
@@ -330,13 +323,12 @@ defmodule Assertions do
       if equal? do
         true
       else
-        raise(
-          [unquote(left), unquote(right)],
-          left_diff,
-          right_diff,
-          unquote(assertion),
-          "Values for #{unquote(stringify_list(keys))} not equal!"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(left), unquote(right)],
+          left: left_diff,
+          right: right_diff,
+          expr: unquote(assertion),
+          message: "Values for #{unquote(stringify_list(keys))} not equal!"
       end
     end
   end
@@ -383,13 +375,12 @@ defmodule Assertions do
       if diff == [] do
         true
       else
-        raise(
-          [unquote(list), unquote(key), unquote(value)],
-          %{key => value},
-          diff,
-          unquote(assertion),
-          "Values for `#{inspect(key)}` not equal in all elements!"
-        )
+        raise ExUnit.AssertionError,
+          args: [unquote(list), unquote(key), unquote(value)],
+          left: %{key => value},
+          right: diff,
+          expr: unquote(assertion),
+          message: "Values for `#{inspect(key)}` not equal in all elements!"
       end
     end
   end
@@ -403,26 +394,28 @@ defmodule Assertions do
   this assertion to pass.
 
       iex> path = Path.expand("../tmp/file.txt", __DIR__)
-      iex> File.mkdir_p!(Path.dirname(path))
-      iex> result = assert_changes_file(path, "hi", File.write(path, "hi"))
+      iex> result = assert_changes_file(path, "hi") do
+      iex>   File.mkdir_p!(Path.dirname(path))
+      iex>   File.write(path, "hi")
+      iex> end
       iex> File.rm_rf!(Path.dirname(path))
       iex> result
       true
 
   """
   @spec assert_changes_file(Path.t(), String.t() | Regex.t(), Macro.expr()) :: true | no_return
-  defmacro assert_changes_file(path, comparison, expr) do
+  defmacro assert_changes_file(path, comparison, [do: expr] = full) do
     assertion =
       assertion(
         quote do
-          assert_changes_file(unquote(path), unquote(comparison), unquote(expr))
+          assert_changes_file(unquote(path), unquote(comparison), unquote(full))
         end
       )
 
     quote do
       path = unquote(path)
       comparison = unquote(comparison)
-      args = [unquote(path), unquote(comparison), unquote(Macro.to_string(expr))]
+      args = [unquote(path), unquote(comparison)]
 
       {match_before?, start_file} =
         case File.read(path) do
@@ -455,13 +448,12 @@ defmodule Assertions do
         if end_file =~ comparison do
           true
         else
-          raise(
-            args,
-            end_file,
-            comparison,
-            unquote(assertion),
-            "File did not change to match comparison after expr!"
-          )
+        raise ExUnit.AssertionError,
+            args: args,
+            left: end_file,
+            right: comparison,
+            expr: unquote(assertion),
+            message: "File did not change to match comparison after expr!"
         end
       end
     end
@@ -472,24 +464,26 @@ defmodule Assertions do
 
       iex> path = Path.expand("../tmp/file.txt", __DIR__)
       iex> File.mkdir_p!(Path.dirname(path))
-      iex> result = assert_creates_file(path, File.write(path, "hi"))
+      iex> result = assert_creates_file path do
+      iex>   File.write(path, "hi")
+      iex> end
       iex> File.rm_rf!(Path.dirname(path))
       iex> result
       true
 
   """
   @spec assert_creates_file(Path.t(), Macro.expr()) :: true | no_return
-  defmacro assert_creates_file(path, expr) do
+  defmacro assert_creates_file(path, [do: expr] = full) do
     assertion =
       assertion(
         quote do
-          assert_creates_file(unquote(path), unquote(expr))
+          assert_creates_file(unquote(path), unquote(full))
         end
       )
 
     quote do
       path = unquote(path)
-      args = [unquote(path), unquote(Macro.to_string(expr))]
+      args = [unquote(path)]
 
       if File.exists?(path) do
         raise ExUnit.AssertionError,
@@ -517,22 +511,24 @@ defmodule Assertions do
       iex> path = Path.expand("../tmp/file.txt", __DIR__)
       iex> File.mkdir_p!(Path.dirname(path))
       iex> File.write(path, "hi")
-      iex> assert_deletes_file(path, File.rm_rf!(Path.dirname(path)))
+      iex> assert_deletes_file path do
+      iex>   File.rm_rf!(Path.dirname(path))
+      iex> end
       true
 
   """
   @spec assert_deletes_file(Path.t(), Macro.expr()) :: true | no_return
-  defmacro assert_deletes_file(path, expr) do
+  defmacro assert_deletes_file(path, [do: expr] = full) do
     assertion =
       assertion(
         quote do
-          assert_deletes_file(unquote(path), unquote(expr))
+          assert_deletes_file(unquote(path), unquote(full))
         end
       )
 
     quote do
       path = unquote(path)
-      args = [unquote(path), unquote(Macro.to_string(expr))]
+      args = [unquote(path)]
 
       if !File.exists?(path) do
         raise ExUnit.AssertionError,
@@ -725,12 +721,7 @@ defmodule Assertions do
 
   def compare_lists(left, right, comparison) do
     quote do
-      left = unquote(left)
-      right = unquote(right)
-      comparison = unquote(comparison)
-      left_diff = compare(right, left, comparison)
-      right_diff = compare(left, right, comparison)
-      {left_diff, right_diff, left_diff == right_diff}
+      compare_lists(unquote(left), unquote(right), unquote(comparison))
     end
   end
 
@@ -755,17 +746,6 @@ defmodule Assertions do
       end)
       |> Enum.join(", ")
     end
-  end
-
-  # public because we're calling it from inside a macro
-  @doc false
-  def raise(args, left, right, expr, message) do
-    raise ExUnit.AssertionError,
-      args: args,
-      left: left,
-      right: right,
-      expr: expr,
-      message: message
   end
 
   defp expand_pattern({:when, meta, [left, right]}, caller) do

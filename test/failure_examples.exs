@@ -110,22 +110,30 @@ defmodule Assertions.FailureExamples do
 
   describe "assert_changes_file/3" do
     test "fails when the file doesn't exist" do
-      assert_changes_file(@path, "hi", File.write(@path, "hi"))
+      assert_changes_file @path, "hi" do
+        File.write(@path, "hi")
+      end
     end
 
     test "fails when the file matches before the expression is executed" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi there, I'm pre-existing.")
-      assert_changes_file(@path, "hi", File.write(@path, "hi"))
+      assert_changes_file @path, "hi" do
+        File.write(@path, "hi")
+      end
     end
 
     test "fails when the file doesn't exist after the expression is executed" do
-      assert_changes_file(@path, "hi", File.mkdir_p!(Path.dirname(@path)))
+      assert_changes_file @path, "hi" do
+        File.mkdir_p!(Path.dirname(@path))
+      end
     end
 
     test "fails when the file doesn't match the comparison" do
-      File.mkdir_p!(Path.dirname(@path))
-      assert_changes_file(@path, "guten Tag", File.write(@path, "hi"))
+      assert_changes_file @path, "guten Tag" do
+        File.mkdir_p!(Path.dirname(@path))
+        File.write(@path, "hi")
+      end
     end
   end
 
@@ -133,23 +141,31 @@ defmodule Assertions.FailureExamples do
     test "fails when the file exists before the function" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi")
-      assert_creates_file(@path, File.write(@path, "hi"))
+      assert_creates_file @path do
+        File.write(@path, "hi")
+      end
     end
 
     test "fails when the file doesn't exist after the function" do
-      assert_creates_file(@path, File.mkdir_p!(Path.dirname(@path)))
+      assert_creates_file @path do
+        File.mkdir_p!(Path.dirname(@path))
+      end
     end
   end
 
   describe "assert_deletes_file/2" do
     test "fails when the file doesn't exist before the function" do
-      assert_deletes_file(@path, File.mkdir_p!(Path.dirname(@path)))
+      assert_deletes_file @path do
+        File.mkdir_p!(Path.dirname(@path))
+      end
     end
 
     test "fails when the file exists after the function" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi there")
-      assert_deletes_file(@path, File.write(@path, "I'm pre-existing."))
+      assert_deletes_file @path do
+        File.write(@path, "I'm pre-existing.")
+      end
     end
   end
 
