@@ -118,6 +118,7 @@ defmodule Assertions.FailureExamples do
     test "fails when the file matches before the expression is executed" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi there, I'm pre-existing.")
+
       assert_changes_file @path, "hi" do
         File.write(@path, "hi")
       end
@@ -141,6 +142,7 @@ defmodule Assertions.FailureExamples do
     test "fails when the file exists before the function" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi")
+
       assert_creates_file @path do
         File.write(@path, "hi")
       end
@@ -163,6 +165,7 @@ defmodule Assertions.FailureExamples do
     test "fails when the file exists after the function" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi there")
+
       assert_deletes_file @path do
         File.write(@path, "I'm pre-existing.")
       end

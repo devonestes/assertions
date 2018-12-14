@@ -265,7 +265,8 @@ defmodule Assertions do
           left: struct,
           right: list,
           expr: unquote(assertion),
-          message: "Struct matching the values for keys #{unquote(stringify_list(keys))} not found"
+          message:
+            "Struct matching the values for keys #{unquote(stringify_list(keys))} not found"
       end
     end
   end
@@ -448,7 +449,7 @@ defmodule Assertions do
         if end_file =~ comparison do
           true
         else
-        raise ExUnit.AssertionError,
+          raise ExUnit.AssertionError,
             args: args,
             left: end_file,
             right: comparison,

@@ -1,4 +1,4 @@
-# Assertions [![Hex Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions) [![Build Status](https://travis-ci.org/devonestes/assertions.svg?branch=master)](https://travis-ci.org/devonestes/assertions)
+# Assertions [![Hex Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions) [![Build Status](https://travis-ci.com/devonestes/assertions.svg?branch=master)](https://travis-ci.com/devonestes/assertions)
 
 ## Installation
 
@@ -199,7 +199,7 @@ test "a map in a list matches the value of this other map" do
 end
 ```
 
-And the output will looks like this:
+And then the output looks like this:
 
 ```
      Map matching the values for keys `:key` not found
