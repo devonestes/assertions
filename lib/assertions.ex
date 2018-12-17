@@ -6,6 +6,73 @@ defmodule Assertions do
   @type comparison :: (any, any -> boolean)
 
   @doc """
+  Asserts that the return value of the given expression is `true`.
+
+  This is different than the normal behavior of `assert` since that will pass
+  for any value that is "truthy" (anything other than `false` or `nil`). This is
+  a stricter assertion, only passing if the value is `true`. This is very
+  helpful for testing values that are expected to only be booleans.
+
+      iex> assert!(:a == :a)
+      true
+      iex> assert!(10 > 5)
+      true
+      iex> map = %{key: true}
+      iex> assert!(map.key)
+      true
+
+  """
+  @spec assert!(Macro.expr()) :: true | no_return
+  defmacro assert!(assertion) do
+    {args, value} = extract_args(assertion, __CALLER__)
+
+    quote do
+      value = unquote(value)
+
+      unless value == true do
+        raise ExUnit.AssertionError,
+          args: unquote(args),
+          expr: unquote(escape_quoted(:assert, assertion)),
+          message: "Expected `true`, got #{inspect(value)}"
+      end
+
+      value
+    end
+  end
+
+  @doc """
+  Asserts that the return value of the given expression is `false`.
+
+  This is different than the normal behavior of `refute/1` since that will pass
+  if the value is either `false` or `nil`. This is a stricter assertion, only
+  passing if the value is `false`. This is very helpful for testing values that
+  are expected to only be booleans.
+
+      iex> refute!(5 > 10)
+      true
+      iex> refute!("a" == "A")
+      true
+
+  """
+  @spec refute!(Macro.expr()) :: true | no_return
+  defmacro refute!(assertion) do
+    {args, value} = extract_args(assertion, __CALLER__)
+
+    quote do
+      value = unquote(value)
+
+      unless value == false do
+        raise ExUnit.AssertionError,
+          args: unquote(args),
+          expr: unquote(escape_quoted(:assert, assertion)),
+          message: "Expected `false`, got #{inspect(value)}"
+      end
+
+      true
+    end
+  end
+
+  @doc """
   Asserts that two lists contain the same elements without asserting they are
   in the same order.
 
@@ -810,5 +877,38 @@ defmodule Assertions do
       end)
 
     {name, meta, [expr, [do: clauses]]}
+  end
+
+  defp extract_args({root, meta, [_ | _] = args} = expr, env) do
+    arity = length(args)
+
+    reserved? =
+      is_atom(root) and (Macro.special_form?(root, arity) or Macro.operator?(root, arity))
+
+    all_quoted_literals? = Enum.all?(args, &Macro.quoted_literal?/1)
+
+    case Macro.expand_once(expr, env) do
+      ^expr when not reserved? and not all_quoted_literals? ->
+        vars = for i <- 1..arity, do: Macro.var(:"arg#{i}", __MODULE__)
+
+        quoted =
+          quote do
+            {unquote_splicing(vars)} = {unquote_splicing(args)}
+            unquote({root, meta, vars})
+          end
+
+        {vars, quoted}
+
+      other ->
+        {ExUnit.AssertionError.no_value(), other}
+    end
+  end
+
+  defp extract_args(expr, _env) do
+    {ExUnit.AssertionError.no_value(), expr}
+  end
+
+  defp escape_quoted(kind, expr) do
+    Macro.escape({kind, [], [expr]}, prune_metadata: true)
   end
 end

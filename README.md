@@ -112,7 +112,7 @@ defmodule UsersTest do
         |> Enum.map(& &1.name)
         |> assert_lists_equal(["Alice A.", "Bob B."])
 
-      assert_lists_equal(result, Users.list_all(), & &1.name == &2.name)
+      assert_lists_equal(result, Users.list_all(), &assert_structs_equal(&1, &2, [:name]))
     end
   end
 end
@@ -128,7 +128,7 @@ But `assert_lists_equal` also solves the other problem we had when we wanted to
 compare lists of structs. That second assertion:
 
 ```elixir
-assert_lists_equal(result, Users.list_all(), & &1.name == &2.name)
+assert_lists_equal(result, Users.list_all(), &assert_structs_equal(&1, &2, [:name]))
 ```
 
 is comparing that the two lists are equal, but we give it a custom comparison

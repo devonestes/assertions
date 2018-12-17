@@ -22,6 +22,12 @@ defmodule AssertionsTest do
       assert output =~
                "arguments:\e[0m\n\n         # 1\n         [1, 2, 3]\n\n         # 2\n         [1, 4, 2]\n\n     \e[36mleft:  \e[0m[\e[31m3\e[0m]\n     \e[36mright: \e[0m[\e[32m4\e[0m]\n     \e[36m"
     end
+
+    test "works when composed with other assertions" do
+      list1 = [DateTime.utc_now(), DateTime.utc_now()]
+      list2 = [DateTime.utc_now(), DateTime.utc_now()]
+      assert_lists_equal(list1, list2, &assert_structs_equal(&1, &2, [:year, :month]))
+    end
   end
 
   describe "assert_lists_equal/3" do

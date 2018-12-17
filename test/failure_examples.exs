@@ -16,6 +16,18 @@ defmodule Assertions.FailureExamples do
     end)
   end
 
+  describe "assert!/1" do
+    test "fails" do
+      assert!("A string")
+    end
+  end
+
+  describe "refute!/1" do
+    test "fails" do
+      refute!(nil)
+    end
+  end
+
   describe "assert_lists_equal/2" do
     test "fails" do
       assert_lists_equal([1, 2, 3], [1, 4, 2])
