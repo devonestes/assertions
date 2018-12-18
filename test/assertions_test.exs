@@ -40,10 +40,6 @@ defmodule AssertionsTest do
           right = ["lion", "dog"]
           assert_lists_equal(left, right, &(String.length(&1) == String.length(&2)))
         end
-
-        test "fails with message" do
-          assert_lists_equal([1, 2, 3], [1, 4, 2], "Not actually equal!")
-        end
       end
 
       output = run_tests()
@@ -58,12 +54,22 @@ defmodule AssertionsTest do
 
       assert output =~
                "\e[36mleft:  \e[0m[\e[31m\"cat\"\e[0m]\n     \e[36mright: \e[0m[\e[32m\"lion\"\e[0m]"
+    end
+  end
 
-      assert output =~ "Not actually equal!"
-      assert output =~ "assert_lists_equal([1, 2, 3], [1, 4, 2], \"Not actually equal!\")"
+  describe "assert_structs_equal/3" do
+    defmodule Nested do
+      defstruct [:key, :list, :map]
+    end
 
-      assert output =~
-               "arguments:\e[0m\n\n         # 1\n         [1, 2, 3]\n\n         # 2\n         [1, 4, 2]\n\n         # 3\n         \"Not actually equal!\"\n\n     \e[36mleft:  \e[0m[\e[31m3\e[0m]\n     \e[36mright: \e[0m[\e[32m4\e[0m]"
+    test "works with nested assertions" do
+      first = %Nested{key: :value, list: [1, 2, 3], map: %{a: :a}}
+      second = %Nested{key: :value, list: [1, 3, 2], map: %{"a" => :a}}
+      assert_structs_equal(first, second, fn left, right ->
+        assert left.key == right.key
+        assert_lists_equal(left.list, right.list)
+        assert_maps_equal(left.map, right.map, &(&1.a == &2["a"]))
+      end)
     end
   end
 

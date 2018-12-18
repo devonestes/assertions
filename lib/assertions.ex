@@ -3,6 +3,8 @@ defmodule Assertions do
   Helpful assertions with great error messages to help you write better tests.
   """
 
+  alias Assertions.Comparisons
+
   @type comparison :: (any, any -> boolean)
 
   @doc """
@@ -90,7 +92,7 @@ defmodule Assertions do
       )
 
     quote do
-      {left_diff, right_diff, equal?} = compare_lists(unquote(left), unquote(right), &Kernel.==/2)
+      {left_diff, right_diff, equal?} = Comparisons.compare_lists(unquote(left), unquote(right))
 
       if equal? do
         true
@@ -109,43 +111,14 @@ defmodule Assertions do
   Asserts that two lists contain the same elements without asserting they are
   in the same order.
 
-  The third argument can either be a custom failure message, or a function used
-  to compare elements in the lists.
+  The given comparison function determines if the two lists are considered
+  equal.
 
-      iex> assert_lists_equal([1, 2, 3], [1, 3, 2], "NOT A MATCH")
-      true
-
-      iex> assert_lists_equal(["dog"], ["cat"], &(String.length(&1) == String.length(&2)))
+      iex> assert_lists_equal(["dog"], ["cat"], &(is_binary(&1) and is_binary(&2)))
       true
 
   """
-  @spec assert_lists_equal(list, list, comparison | String.t()) :: true | no_return
-  defmacro assert_lists_equal(left, right, message_or_comparison)
-
-  defmacro assert_lists_equal(left, right, message) when is_binary(message) do
-    assertion =
-      assertion(
-        quote do
-          assert_lists_equal(unquote(left), unquote(right), unquote(message))
-        end
-      )
-
-    quote do
-      {left_diff, right_diff, equal?} = compare_lists(unquote(left), unquote(right), &Kernel.==/2)
-
-      if equal? do
-        true
-      else
-        raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right), unquote(message)],
-          left: left_diff,
-          right: right_diff,
-          expr: unquote(assertion),
-          message: unquote(message)
-      end
-    end
-  end
-
+  @spec assert_lists_equal(list, list, comparison) :: true | no_return
   defmacro assert_lists_equal(left, right, comparison) do
     assertion =
       assertion(
@@ -156,7 +129,7 @@ defmodule Assertions do
 
     quote do
       {left_diff, right_diff, equal?} =
-        compare_lists(unquote(left), unquote(right), unquote(comparison))
+        Comparisons.compare_lists(unquote(left), unquote(right), unquote(comparison))
 
       if equal? do
         true
@@ -172,105 +145,124 @@ defmodule Assertions do
   end
 
   @doc """
-  Asserts that two lists contain the same elements without asserting they are
-  in the same order.
+  Asserts that a `map` is in the given `list`.
 
-  If the comparison fails, the given `message` is used as the failure message.
+  This is either done by passing a list of `keys`, and the values at those keys
+  will be compared to determine if the map is in the list.
 
-      iex> assert_lists_equal(
-      iex>   ["dog"],
-      iex>   ["cat"],
-      iex>   &(String.length(&1) == String.length(&2)),
-      iex>   "FAILED WITH CUSTOM MESSAGE"
-      iex> )
+      iex> map = %{first: :first, second: :second}
+      iex> list = [%{first: :first, second: :second, third: :third}]
+      iex> keys = [:first, :second]
+      iex> assert_map_in_list(map, list, keys)
       true
 
-  """
-  @spec assert_lists_equal(list, list, comparison, String.t()) :: true | no_return
-  defmacro assert_lists_equal(left, right, comparison, message) do
-    assertion =
-      assertion(
-        quote do
-          assert_lists_equal(unquote(left), unquote(right), unquote(comparison), unquote(message))
-        end
-      )
+  Or this is done by passing a comparison function that determines if the map
+  is in the list.
 
-    quote do
-      {left_diff, right_diff, equal?} =
-        compare_lists(unquote(left), unquote(right), unquote(comparison))
+  If using a comparison function, the `map` is the first argument to that
+  function, and the elements in the list are the second argument.
 
-      if equal? do
-        true
-      else
-        raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right), unquote(comparison), unquote(message)],
-          left: left_diff,
-          right: right_diff,
-          expr: unquote(assertion),
-          message: unquote(message)
-      end
-    end
-  end
-
-  @doc """
-  Asserts that a `map` with the same values for the given `keys` is in the
-  `list`.
-
-      iex> list = [%{first: :first, second: :second, third: :third}]
-      iex> assert_map_in_list(%{first: :first, second: :second}, list, [:first, :second])
+      iex> map = %{first: :first, second: :second}
+      iex> list = [%{"first" => :first, "second" => :second, "third" => :third}]
+      iex> comparison = &(&1.first == &2["first"] and &1.second == &2["second"])
+      iex> assert_map_in_list(map, list, comparison)
       true
 
   """
   @spec assert_map_in_list(map, [map], [any]) :: true | no_return
-  defmacro assert_map_in_list(map, list, keys) do
+  @spec assert_map_in_list(map, [map], comparison) :: true | no_return
+  defmacro assert_map_in_list(map, list, keys_or_comparison) do
     assertion =
       assertion(
         quote do
-          assert_map_in_list(unquote(map), unquote(list), unquote(keys))
+          assert_map_in_list(unquote(map), unquote(list), unquote(keys_or_comparison))
         end
       )
 
     quote do
-      keys = unquote(keys)
-      list = Enum.map(unquote(list), &Map.take(&1, keys))
-      map = Map.take(unquote(map), keys)
+      keys_or_comparison = unquote(keys_or_comparison)
 
-      unless map in list do
+      {in_list?, map, list, message} =
+        if is_list(keys_or_comparison) do
+          keys = keys_or_comparison
+          map = Map.take(unquote(map), keys)
+          list = Enum.map(unquote(list), &Map.take(&1, keys))
+          keys = unquote(stringify_list(keys_or_comparison))
+          message = "Map matching the values for keys `#{keys}` not found"
+          {true, map, list, message}
+        else
+          comparison = keys_or_comparison
+          map = unquote(map)
+          list = unquote(list)
+          message = "Map not found in list using given comparison"
+
+          {Enum.any?(list, &comparison.(map, &1)), map, list, message}
+        end
+
+      if in_list? do
+        true
+      else
         raise ExUnit.AssertionError,
           args: [unquote(map), unquote(list)],
           left: map,
           right: list,
           expr: unquote(assertion),
-          message: "Map matching the values for keys `#{unquote(stringify_list(keys))}` not found"
-      else
-        true
+          message: message
       end
     end
   end
 
   @doc """
-  Asserts that the values in `left` and `right` are the same for the `keys`
+  Asserts that two maps are equal.
+
+  Equality can be determined in two ways. First, by passing a list of keys. The
+  values at these keys will be used to determine if the maps are equal.
 
       iex> left = %{first: :first, second: :second, third: :third}
       iex> right = %{first: :first, second: :second, third: :fourth}
-      iex> assert_maps_equal(left, right, [:first, :second])
+      iex> keys = [:first, :second]
+      iex> assert_maps_equal(left, right, keys)
+      true
+
+  The second is to pass a comparison function that returns a boolean that
+  determines if the maps are equal. When using a comparison function, the first
+  argument to the function is the `left` map and the second argument is the
+  `right` map.
+
+      iex> left = %{first: :first, second: :second, third: :third}
+      iex> right = %{"first" => :first, "second" => :second, "third" => :fourth}
+      iex> comparison = &(&1.first == &2["first"] and &1.second == &2["second"])
+      iex> assert_maps_equal(left, right, comparison)
       true
 
   """
   @spec assert_maps_equal(map, map, [any]) :: true | no_return
-  defmacro assert_maps_equal(left, right, keys) do
+  @spec assert_maps_equal(map, map, comparison) :: true | no_return
+  defmacro assert_maps_equal(left, right, keys_or_comparison) do
     assertion =
       assertion(
         quote do
-          assert_maps_equal(unquote(left), unquote(right), unquote(keys))
+          assert_maps_equal(unquote(left), unquote(right), unquote(keys_or_comparison))
         end
       )
 
     quote do
-      keys = unquote(keys)
-      left = Map.take(unquote(left), keys)
-      right = Map.take(unquote(right), keys)
-      {left_diff, right_diff, equal?} = compare_maps(left, right)
+      keys_or_comparison = unquote(keys_or_comparison)
+      left = unquote(left)
+      right = unquote(right)
+
+      {left_diff, right_diff, equal?, message} =
+        if is_list(keys_or_comparison) do
+          keys = keys_or_comparison
+          left = Map.take(left, keys)
+          right = Map.take(right, keys)
+          {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
+          message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
+          {left_diff, right_diff, equal?, message}
+        else
+          comparison = keys_or_comparison
+          {left, right, comparison.(left, right), "Maps not equal using given comprison"}
+        end
 
       if equal? do
         true
@@ -280,113 +272,136 @@ defmodule Assertions do
           left: left_diff,
           right: right_diff,
           expr: unquote(assertion),
-          message: "Values for #{unquote(stringify_list(keys))} not equal!"
+          message: message
       end
     end
   end
 
   @doc """
-  Asserts that a struct with certain values is present in the `list`.
+  Asserts that the `struct` is present in the `list`.
 
-  There are two ways to make this comparison.
+  There are two ways to make this comparison. First is to pass a list of keys
+  to use to compare the `struct` to the structs in the `list`.
 
-  First is to pass a struct, a list of keys to use to compare that struct to
-  the structs in the list, and a list of structs.
-
+      iex> now = DateTime.utc_now()
       iex> list = [DateTime.utc_now(), Date.utc_today()]
-      iex> assert_struct_in_list(DateTime.utc_now(), [:year, :month, :day, :second], list)
+      iex> keys = [:year, :month, :day]
+      iex> assert_struct_in_list(now, list, keys)
       true
 
-  The second way to use this assertion is to pass a map of keys and values that
-  you expect to be in the struct, a module representing the type of struct you
-  are expecting, and a list of structs.
+  The second way to use this assertion is to pass a comparison function.
 
+  When using a comparison function, the `struct` is the first argument to that
+  function and the elements in the `list` will be the second argument.
+
+      iex> now = DateTime.utc_now()
       iex> list = [DateTime.utc_now(), Date.utc_today()]
-      iex> year = DateTime.utc_now().year
-      iex> assert_struct_in_list(%{year: year}, DateTime, list)
+      iex> assert_struct_in_list(now, list, &(&1.year == &2.year))
       true
 
   """
-  @spec assert_struct_in_list(struct, [any], [struct]) :: true | no_return
-  @spec assert_struct_in_list(map, module, [struct]) :: true | no_return
-  defmacro assert_struct_in_list(struct_or_map, keys_or_type, list)
-
-  defmacro assert_struct_in_list(struct, keys, list) when is_list(keys) do
+  @spec assert_struct_in_list(struct, [struct], [atom]) :: true | no_return
+  @spec assert_struct_in_list(struct, [struct], (struct, struct -> boolean)) :: true | no_return
+  defmacro assert_struct_in_list(struct, list, keys_or_comparison) do
     assertion =
       assertion(
         quote do
-          assert_struct_in_list(unquote(struct), unquote(keys), unquote(list))
+          assert_struct_in_list(unquote(struct), unquote(list), unquote(keys_or_comparison))
         end
       )
 
     quote do
-      keys = [:__struct__ | unquote(keys)]
-      struct = Map.take(unquote(struct), keys)
-      list = Enum.map(unquote(list), fn map -> Map.take(map, keys) end)
+      struct = unquote(struct)
+      list = unquote(list)
+      keys_or_comparison = unquote(keys_or_comparison)
 
-      if struct in list do
+      {in_list?, message} =
+        if is_list(keys_or_comparison) do
+          keys = [:__struct__ | keys_or_comparison]
+          struct = Map.take(struct, keys)
+          list = Enum.map(list, &Map.take(&1, keys))
+
+          {struct in list,
+           "Struct matching the values for keys #{unquote(stringify_list(keys_or_comparison))} not found"}
+        else
+          comparison = keys_or_comparison
+
+          {Enum.any?(list, &comparison.(struct, &1)),
+           "Struct not found in list using the given comparison"}
+        end
+
+      if in_list? do
         true
       else
         raise ExUnit.AssertionError,
-          args: [unquote(struct), unquote(keys), unquote(list)],
+          args: [struct, list, keys_or_comparison],
           left: struct,
           right: list,
           expr: unquote(assertion),
-          message:
-            "Struct matching the values for keys #{unquote(stringify_list(keys))} not found"
-      end
-    end
-  end
-
-  defmacro assert_struct_in_list(map, module, list) do
-    assertion =
-      assertion(
-        quote do
-          assert_struct_in_list(unquote(map), unquote(module), unquote(list))
-        end
-      )
-
-    quote do
-      map = Map.put(unquote(map), :__struct__, unquote(module))
-      keys = Map.keys(map)
-      list = Enum.map(unquote(list), fn map -> Map.take(map, keys) end)
-
-      if map in list do
-        true
-      else
-        raise ExUnit.AssertionError,
-          args: [unquote(map), unquote(module), unquote(list)],
-          left: map,
-          right: list,
-          expr: unquote(assertion),
-          message: "Struct matching #{inspect(map)} not found"
+          message: message
       end
     end
   end
 
   @doc """
-  Asserts that the values in struct `left` and struct `right` are the same for
-  the given `keys`
+  Asserts that two structs are equal.
 
-      iex> assert_structs_equal(DateTime.utc_now(), DateTime.utc_now(), [:year, :minute])
+  Equality can be determined in two ways. First, by passing a list of keys. The
+  values at these keys and the type of the structs will be used to determine if
+  the structs are equal.
+
+      iex> left = DateTime.utc_now()
+      iex> right = DateTime.utc_now()
+      iex> keys = [:year, :minute]
+      iex> assert_structs_equal(left, right, keys)
+      true
+
+  The second is to pass a comparison function that returns a boolean that
+  determines if the structs are equal. When using a comparison function, the
+  first argument to the function is the `left` struct and the second argument
+  is the `right` struct.
+
+      iex> left = DateTime.utc_now()
+      iex> right = DateTime.utc_now()
+      iex> comparison = &(&1.year == &2.year and &1.minute == &2.minute)
+      iex> assert_structs_equal(left, right, comparison)
       true
 
   """
-  @spec assert_structs_equal(struct, struct, [any]) :: true | no_return
-  defmacro assert_structs_equal(left, right, keys) do
+  @spec assert_structs_equal(struct, struct, [atom]) :: true | no_return
+  @spec assert_structs_equal(struct, struct, (any, any -> boolean)) :: true | no_return
+  defmacro assert_structs_equal(left, right, keys_or_comparison) do
     assertion =
       assertion(
         quote do
-          assert_structs_equal(unquote(left), unquote(right), unquote(keys))
+          assert_structs_equal(unquote(left), unquote(right), unquote(keys_or_comparison))
         end
       )
 
     quote do
-      keys = [:__struct__ | unquote(keys)]
-      left = Map.take(unquote(left), keys)
-      right = Map.take(unquote(right), keys)
+      left = unquote(left)
+      right = unquote(right)
+      keys_or_comparison = unquote(keys_or_comparison)
 
-      {left_diff, right_diff, equal?} = compare_maps(left, right)
+      {left_diff, right_diff, equal?, message} =
+        if is_list(keys_or_comparison) do
+          keys = [:__struct__ | keys_or_comparison]
+          left = Map.take(left, keys)
+          right = Map.take(right, keys)
+          message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
+          {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
+          {left_diff, right_diff, equal?, message}
+        else
+          comparison = keys_or_comparison
+
+          {left_diff, right_diff, equal?} =
+            case comparison.(left, right) do
+              {_, _, equal?} = result when is_boolean(equal?) -> result
+              true_or_false when is_boolean(true_or_false) -> {left, right, true_or_false}
+            end
+
+          {left_diff, right_diff, equal?, "Comparison failed!"}
+        end
 
       if equal? do
         true
@@ -396,7 +411,7 @@ defmodule Assertions do
           left: left_diff,
           right: right_diff,
           expr: unquote(assertion),
-          message: "Values for #{unquote(stringify_list(keys))} not equal!"
+          message: message
       end
     end
   end
@@ -455,7 +470,7 @@ defmodule Assertions do
 
   @doc """
   Asserts that the file at `path` is changed to match `comparison` after
-  executing `expr`.
+  executing the given `expression`.
 
   If the file matches `comparison` before executing `expr`, this assertion will
   fail. The file does not have to exist before executing `expr` in order for
@@ -472,11 +487,11 @@ defmodule Assertions do
 
   """
   @spec assert_changes_file(Path.t(), String.t() | Regex.t(), Macro.expr()) :: true | no_return
-  defmacro assert_changes_file(path, comparison, [do: expr] = full) do
+  defmacro assert_changes_file(path, comparison, [do: expr] = expression) do
     assertion =
       assertion(
         quote do
-          assert_changes_file(unquote(path), unquote(comparison), unquote(full))
+          assert_changes_file(unquote(path), unquote(comparison), unquote(expression))
         end
       )
 
@@ -528,7 +543,8 @@ defmodule Assertions do
   end
 
   @doc """
-  Asserts that the file at `path` is created after executing `expr`.
+  Asserts that the file at `path` is created after executing the given
+  `expression`.
 
       iex> path = Path.expand("../tmp/file.txt", __DIR__)
       iex> File.mkdir_p!(Path.dirname(path))
@@ -541,11 +557,11 @@ defmodule Assertions do
 
   """
   @spec assert_creates_file(Path.t(), Macro.expr()) :: true | no_return
-  defmacro assert_creates_file(path, [do: expr] = full) do
+  defmacro assert_creates_file(path, [do: expr] = expression) do
     assertion =
       assertion(
         quote do
-          assert_creates_file(unquote(path), unquote(full))
+          assert_creates_file(unquote(path), unquote(expression))
         end
       )
 
@@ -574,7 +590,8 @@ defmodule Assertions do
   end
 
   @doc """
-  Asserts that the file at `path` is deleted after executing `expr`.
+  Asserts that the file at `path` is deleted after executing the given
+  `expression`.
 
       iex> path = Path.expand("../tmp/file.txt", __DIR__)
       iex> File.mkdir_p!(Path.dirname(path))
@@ -586,11 +603,11 @@ defmodule Assertions do
 
   """
   @spec assert_deletes_file(Path.t(), Macro.expr()) :: true | no_return
-  defmacro assert_deletes_file(path, [do: expr] = full) do
+  defmacro assert_deletes_file(path, [do: expr] = expression) do
     assertion =
       assertion(
         quote do
-          assert_deletes_file(unquote(path), unquote(full))
+          assert_deletes_file(unquote(path), unquote(expression))
         end
       )
 
@@ -625,14 +642,6 @@ defmodule Assertions do
   The optional second argument is a timeout for the `receive` to wait for the
   expected message, and defaults to 100ms.
 
-  If you want to check that no message was received before the expected message,
-  **and** that no message is received for a given time after calling
-  `receive_only?/2`, you can combine `received_only?/2` with
-  `ExUnit.Assertions.refute_receive/3`.
-
-      assert_receive_only(:hello)
-      refute_receive _, 100
-
   ## Examples
 
       iex> send(self(), :hello)
@@ -658,14 +667,14 @@ defmodule Assertions do
       iex> value
       :value
 
-  If a message is received after the function has matched a message to the given
-  pattern, but the second message is received before the timeout, that second
-  message is ignored and the function returns `true`.
+  If a message is received after the assertion has matched a message to the
+  given pattern, but the second message is received before the timeout, that
+  second message is ignored and the assertion returns `true`.
 
   This assertion only tests that the message that matches the given pattern was
   the first message in the process inbox, and that nothing was sent between the
-  sending the message that matches the pattern and when `receive_only?/2` was
-  called.
+  sending the message that matches the pattern and when `assert_receive_only/2`
+  was called.
 
       iex> Process.send_after(self(), :hello, 20)
       iex> Process.send_after(self(), :hello_again, 50)
@@ -769,37 +778,6 @@ defmodule Assertions do
 
       true
     end
-  end
-
-  @doc false
-  def compare_maps(left, right) do
-    {left_diff, right_diff, equal?} =
-      compare_lists(Map.to_list(left), Map.to_list(right), &Kernel.==/2)
-
-    {Map.new(left_diff), Map.new(right_diff), equal?}
-  end
-
-  @doc false
-  def compare_lists(left, right, comparison)
-      when is_function(comparison, 2) and is_list(left) and is_list(right) do
-    left_diff = compare(right, left, comparison)
-    right_diff = compare(left, right, comparison)
-    {left_diff, right_diff, left_diff == right_diff}
-  end
-
-  def compare_lists(left, right, comparison) do
-    quote do
-      compare_lists(unquote(left), unquote(right), unquote(comparison))
-    end
-  end
-
-  defp compare(left, right, comparison) do
-    Enum.reduce(left, right, fn left_element, list ->
-      case Enum.find_index(list, &comparison.(left_element, &1)) do
-        nil -> list
-        index -> List.delete_at(list, index)
-      end
-    end)
   end
 
   defp assertion(quoted), do: Macro.escape(quoted, prune_metadata: true)
