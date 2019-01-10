@@ -6,6 +6,7 @@ defmodule AssertionsTest do
   import ExUnit.CaptureIO, only: [capture_io: 1]
 
   describe "assert_lists_equal/2" do
+    @tag :skip
     test "gives a really great error message" do
       defmodule AssertListsEqual.Two do
         use Assertions.Case, async: true
@@ -31,6 +32,7 @@ defmodule AssertionsTest do
   end
 
   describe "assert_lists_equal/3" do
+    @tag :skip
     test "gives a really great error messages" do
       defmodule AssertListsEqual.Three do
         use Assertions.Case, async: true
@@ -65,6 +67,7 @@ defmodule AssertionsTest do
     test "works with nested assertions" do
       first = %Nested{key: :value, list: [1, 2, 3], map: %{a: :a}}
       second = %Nested{key: :value, list: [1, 3, 2], map: %{"a" => :a}}
+
       assert_structs_equal(first, second, fn left, right ->
         assert left.key == right.key
         assert_lists_equal(left.list, right.list)

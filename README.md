@@ -1,4 +1,4 @@
-# Assertions [![Hex Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions) [![Build Status](https://travis-ci.com/devonestes/assertions.svg?branch=master)](https://travis-ci.com/devonestes/assertions)
+# Assertions [![Hex Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions) [![Build Status](https://travis-ci.org/devonestes/assertions.svg?branch=master)](https://travis-ci.org/devonestes/assertions)
 
 ## Installation
 
@@ -6,7 +6,7 @@ Add `assertions` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:assertions, "~> 0.8", only: :test}]
+  [{:assertions, "~> 0.10", only: :test}]
 end
 ```
 
