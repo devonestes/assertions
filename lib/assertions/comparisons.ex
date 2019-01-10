@@ -2,7 +2,7 @@ defmodule Assertions.Comparisons do
   @moduledoc false
 
   @doc false
-  def compare_maps(left, right, comparison \\ &Kernel.==/2) do
+  def compare_maps(left, right, comparison \\ &Kernel.==/2) when is_map(left) and is_map(right) do
     {left_diff, right_diff, equal?} =
       compare_lists(Map.to_list(left), Map.to_list(right), comparison)
 
@@ -10,7 +10,7 @@ defmodule Assertions.Comparisons do
   end
 
   @doc false
-  def compare_lists(left, right, comparison \\ &Kernel.==/2) do
+  def compare_lists(left, right, comparison \\ &Kernel.==/2) when is_list(left) and is_list(right) do
     left_diff = compare(right, left, comparison)
     right_diff = compare(left, right, comparison)
     {left_diff, right_diff, left_diff == right_diff}
