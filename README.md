@@ -14,8 +14,9 @@ end
 
 ### Importing
 
-If you only want some assertions in a given module, all assertions are available
-for importing into any test you want.
+If you only want some assertions in a given module, then import just the
+functions that you want to use. Otherwise you can simply call `import
+Assertions` and all assertions will be directly available to your test code.
 
 ```elixir
 def UsersTest do
@@ -28,10 +29,31 @@ def UsersTest do
 end
 ```
 
-Because these assertions are all macros, `Assertions` must be `require`d first.
+Because these assertions are all macros, `Assertions` must be `require`d first
+if you want to call a function like `Assertions.assert_map_in_list/3`.
 
 Importing assertions in an existing test case (like `MyApp.DataCase` in a
 Phoenix application) is typically recommended.
+
+Here is an example of how you'd add assertions to your `MyApp.DataCase`:
+```elixir
+defmodule MayApp.DataCase do
+  use ExUnit.CaseTemplate
+
+  using do
+    quote do
+      import Ecto
+      import Ecto.Changeset
+      import Ecto.Query
+
+      import MyApp.DataCase
+
+      # Add the following line
+      import Assertions
+    end
+  end
+end
+```
 
 ### Assertions.Case
 
@@ -46,6 +68,9 @@ def MyApp.UserTest do
   # ...
 end
 ```
+
+But importing assertions in an existing test case (like `MyApp.DataCase` in a
+Phoenix application) is typically recommended.
 
 ## Why use `assertions`?
 
@@ -100,6 +125,7 @@ But, with `assertions`, you can write that test like this:
 ```elixir
 defmodule UsersTest do
   use ExUnit.Case, async: true
+  import Assertions, only: [assert_lists_equal: 2]
 
   describe "update_all/2" do
     test "updates the given users in the database and returns those updated users" do
