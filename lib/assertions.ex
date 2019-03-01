@@ -15,6 +15,9 @@ defmodule Assertions do
   a stricter assertion, only passing if the value is `true`. This is very
   helpful for testing values that are expected to only be booleans.
 
+  This will also check specifically for `nil` values when using `>`, `<`, `>=`
+  or `<=` since those frequently have unintended behavior.
+
       iex> assert!(:a == :a)
       true
       iex> assert!(10 > 5)
@@ -25,6 +28,37 @@ defmodule Assertions do
 
   """
   @spec assert!(Macro.expr()) :: true | no_return
+  defmacro assert!({operator, _, [left, right]} = assertion)
+           when operator in [:>, :<, :>=, :<=] do
+    expr = escape_quoted(:assert!, assertion)
+    {args, value} = extract_args(assertion, __CALLER__)
+
+    quote do
+      left = unquote(left)
+      right = unquote(right)
+
+      if is_nil(left) or is_nil(right) do
+        assert false,
+          left: left,
+          right: right,
+          expr: unquote(expr),
+          message:
+            "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `assert!`"
+      else
+        value = unquote(value)
+
+        unless value == true do
+          raise ExUnit.AssertionError,
+            args: unquote(args),
+            expr: unquote(expr),
+            message: "Expected `true`, got #{inspect(value)}"
+        end
+
+        true
+      end
+    end
+  end
+
   defmacro assert!(assertion) do
     {args, value} = extract_args(assertion, __CALLER__)
 
@@ -34,7 +68,7 @@ defmodule Assertions do
       unless value == true do
         raise ExUnit.AssertionError,
           args: unquote(args),
-          expr: unquote(escape_quoted(:assert, assertion)),
+          expr: unquote(escape_quoted(:assert!, assertion)),
           message: "Expected `true`, got #{inspect(value)}"
       end
 
@@ -57,6 +91,39 @@ defmodule Assertions do
 
   """
   @spec refute!(Macro.expr()) :: true | no_return
+  defmacro refute!({operator, _, [left, right]} = assertion)
+           when operator in [:>, :<, :>=, :<=] do
+    expr = escape_quoted(:refute!, assertion)
+    {args, value} = extract_args(assertion, __CALLER__)
+
+    quote do
+      left = unquote(left)
+      right = unquote(right)
+
+      if is_nil(left) or is_nil(right) do
+          raise ExUnit.AssertionError,
+            args: unquote(args),
+            expr: unquote(expr),
+            left: left,
+            right: right,
+            message: "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `refute!`"
+      else
+        value = unquote(value)
+
+        unless value == false do
+          raise ExUnit.AssertionError,
+            args: unquote(args),
+            expr: unquote(expr),
+            left: left,
+            right: right,
+            message: "Expected `false`, got #{inspect(value)}"
+        end
+
+        true
+      end
+    end
+  end
+
   defmacro refute!(assertion) do
     {args, value} = extract_args(assertion, __CALLER__)
 
@@ -66,7 +133,7 @@ defmodule Assertions do
       unless value == false do
         raise ExUnit.AssertionError,
           args: unquote(args),
-          expr: unquote(escape_quoted(:assert, assertion)),
+          expr: unquote(escape_quoted(:refute!, assertion)),
           message: "Expected `false`, got #{inspect(value)}"
       end
 

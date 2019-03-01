@@ -5,6 +5,30 @@ defmodule AssertionsTest do
 
   import ExUnit.CaptureIO, only: [capture_io: 1]
 
+  describe "assert!/1" do
+    test "fails if either side of >, >=, < or <= is nil" do
+      assert! nil > 0
+    rescue
+      error in [ExUnit.AssertionError] ->
+        assert nil == error.left
+        assert 0 == error.right
+        assert "assert!(nil > 0)" == Macro.to_string(error.expr)
+        assert error.message == "`nil` is not allowed as an argument to `>` when using `assert!`"
+    end
+  end
+
+  describe "refute!/1" do
+    test "fails if either side of >, >=, < or <= is nil" do
+      refute! nil > 0
+    rescue
+      error in [ExUnit.AssertionError] ->
+        assert nil == error.left
+        assert 0 == error.right
+        assert "refute!(nil > 0)" == Macro.to_string(error.expr)
+        assert error.message == "`nil` is not allowed as an argument to `>` when using `refute!`"
+    end
+  end
+
   describe "assert_lists_equal/2" do
     @tag :skip
     test "gives a really great error message" do
