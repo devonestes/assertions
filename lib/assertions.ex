@@ -84,6 +84,9 @@ defmodule Assertions do
   passing if the value is `false`. This is very helpful for testing values that
   are expected to only be booleans.
 
+  This will also check specifically for `nil` values when using `>`, `<`, `>=`
+  or `<=` since those frequently have unintended behavior.
+
       iex> refute!(5 > 10)
       true
       iex> refute!("a" == "A")
