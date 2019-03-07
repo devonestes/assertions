@@ -104,12 +104,13 @@ defmodule Assertions do
       right = unquote(right)
 
       if is_nil(left) or is_nil(right) do
-          raise ExUnit.AssertionError,
-            args: unquote(args),
-            expr: unquote(expr),
-            left: left,
-            right: right,
-            message: "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `refute!`"
+        raise ExUnit.AssertionError,
+          args: unquote(args),
+          expr: unquote(expr),
+          left: left,
+          right: right,
+          message:
+            "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `refute!`"
       else
         value = unquote(value)
 
@@ -847,6 +848,80 @@ defmodule Assertions do
         end
 
       true
+    end
+  end
+
+  @doc """
+  Asserts that some condition succeeds within a given timeout (in milliseconds).
+
+  This is helpful for testing that asynchronous operations have succeeded within
+  a certain timeframe. This method of testing asynchronous operations is less
+  reliable than other methods, but it can often be more useful at an integration
+  level.
+
+      iex> Process.send_after(self(), :hello, 50)
+      iex> assert_async do
+      iex>   assert_received :hello
+      iex> end
+      true
+
+      iex> Process.send_after(self(), :hello, 20)
+      iex> try do
+      iex>   assert_async(10) do
+      iex>     assert_received :hello_again
+      iex>   end
+      iex> rescue
+      iex>   _ -> :failed
+      iex> end
+      :failed
+
+  """
+  @spec assert_async(non_neg_integer(), Macro.expr()) :: true | no_return
+  defmacro assert_async(timeout \\ 100, [do: expr] = expression) do
+    assertion =
+      assertion(
+        quote do
+          assert_async(unquote(timeout), unquote(expression))
+        end
+      )
+
+    condition =
+      quote do
+        fn -> unquote(expr) end
+      end
+
+    quote do
+      assert_async(unquote(condition), unquote(assertion), unquote(timeout))
+    end
+  end
+
+  @doc false
+  def assert_async(condition, expr, timeout) do
+    start_time = NaiveDateTime.utc_now()
+    end_time = NaiveDateTime.add(start_time, timeout, :millisecond)
+    assert_async(condition, end_time, expr, timeout)
+  end
+
+  @doc false
+  def assert_async(condition, end_time, expr, timeout) do
+    result =
+      try do
+        condition.()
+      rescue
+        _ -> false
+      end
+
+    if result do
+      true
+    else
+      if NaiveDateTime.compare(NaiveDateTime.utc_now(), end_time) == :lt do
+        assert_async(condition, end_time, expr, timeout)
+      else
+        raise ExUnit.AssertionError,
+          args: [timeout],
+          expr: expr,
+          message: "Given condition did not return true before timeout: #{timeout}"
+      end
     end
   end
 
