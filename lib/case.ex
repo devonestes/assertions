@@ -9,6 +9,7 @@ defmodule Assertions.Case do
     quote do
       require Assertions
       import Assertions
+      import Assertions.Comparisons, only: [maps_equal?: 3, maps_equal?: 2]
     end
   end
 end

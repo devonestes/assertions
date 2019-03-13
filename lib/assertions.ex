@@ -5,7 +5,28 @@ defmodule Assertions do
 
   alias Assertions.Comparisons
 
-  @type comparison :: (any, any -> boolean)
+  @typedoc """
+  A function that is used to compare two elements in an assertion.
+
+  Many assertions in this library allow for users to provide a custom function
+  to use when comparing two elements. The simplest way that these functions are
+  used is if they simply return `true` or `false`, indicating that the two
+  elements are or are not equal (however the user wants to define "equal" in
+  that particular case).
+
+  However, if this function returns a tuple with
+  `{left_diff, right_diff, true_or_false}` then `Assertions` will be able to
+  shrink the diffs in the output recursively instead of just at the top level
+  of an assertion.
+
+  In that case, `left_diff` should contain the elements in the first argument to
+  the function that were not found in the second argument to the function,
+  `right_diff` should contain the elements in the second argument to he function
+  that were not found in the first argument to the function, and `true_or_false`
+  should be a boolean which represents if the two arguments to the function are
+  to be considered equal.
+  """
+  @type comparison :: (any, any -> boolean) | (any, any -> {any, any, boolean})
 
   @doc """
   Asserts that the return value of the given expression is `true`.
@@ -163,7 +184,8 @@ defmodule Assertions do
       )
 
     quote do
-      {left_diff, right_diff, equal?} = Comparisons.compare_lists(unquote(left), unquote(right))
+      {left_diff, right_diff, equal?, _} =
+        Comparisons.compare_lists(unquote(left), unquote(right))
 
       if equal? do
         true
@@ -199,19 +221,29 @@ defmodule Assertions do
       )
 
     quote do
-      {left_diff, right_diff, equal?} =
-        Comparisons.compare_lists(unquote(left), unquote(right), unquote(comparison))
+      left = unquote(left)
+      right = unquote(right)
+      comparison = unquote(comparison)
 
-      if equal? do
-        true
-      else
+      {left_diff, right_diff, equal?, invalid_comparison?} =
+        Comparisons.compare_lists(left, right, comparison, true)
+
+      if invalid_comparison? do
         raise ExUnit.AssertionError,
-          args: [unquote(left), unquote(right), unquote(comparison)],
+          expr: unquote(assertion),
+          message: "The given comparison function returned something other than `true` or `false`"
+      end
+
+      unless equal? do
+        raise ExUnit.AssertionError,
+          args: [left, right, comparison],
           left: left_diff,
           right: right_diff,
           expr: unquote(assertion),
           message: "Comparison of each element failed!"
       end
+
+      true
     end
   end
 
@@ -267,7 +299,16 @@ defmodule Assertions do
           list = unquote(list)
           message = "Map not found in list using given comparison"
 
-          {Enum.any?(list, &comparison.(map, &1)), map, list, message}
+          result =
+            Enum.any?(list, fn elem ->
+              try do
+                comparison.(map, elem)
+              rescue
+                _ in [ExUnit.AssertionError] -> false
+              end
+            end)
+
+          {result, map, list, message}
         end
 
       if in_list? do
@@ -317,22 +358,48 @@ defmodule Assertions do
         end
       )
 
+    keys =
+      quote do
+        cond do
+          Keyword.keyword?(unquote(keys_or_comparison)) ->
+            Keyword.keys(unquote(keys_or_comparison))
+
+          is_list(unquote(keys_or_comparison)) ->
+            unquote(keys_or_comparison)
+
+          true ->
+            nil
+        end
+      end
+
     quote do
       keys_or_comparison = unquote(keys_or_comparison)
+      keys = unquote(keys)
       left = unquote(left)
       right = unquote(right)
 
       {left_diff, right_diff, equal?, message} =
         if is_list(keys_or_comparison) do
-          keys = keys_or_comparison
-          left = Map.take(left, keys)
-          right = Map.take(right, keys)
-          {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
-          message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
+          {left_diff, right_diff, equal?} =
+            Comparisons.maps_equal?(left, right, unquote(keys_or_comparison))
+
+          message = "Values for #{unquote(stringify_list(keys))} not equal!"
           {left_diff, right_diff, equal?, message}
         else
           comparison = keys_or_comparison
-          {left, right, comparison.(left, right), "Maps not equal using given comprison"}
+
+          result =
+            try do
+              case comparison.(left, right) do
+                {left, right, result} when is_boolean(result) ->
+                  {left, right, result, "Maps not equal using given comprison"}
+
+                true_or_false when is_boolean(true_or_false) ->
+                  {left, right, true_or_false, "Maps not equal using given comprison"}
+              end
+            rescue
+              _ in [ExUnit.AssertionError] -> false
+            end
         end
 
       if equal? do
@@ -397,8 +464,16 @@ defmodule Assertions do
         else
           comparison = keys_or_comparison
 
-          {Enum.any?(list, &comparison.(struct, &1)),
-           "Struct not found in list using the given comparison"}
+          result =
+            Enum.any?(list, fn elem ->
+              try do
+                comparison.(struct, elem)
+              rescue
+                _ in [ExUnit.AssertionError] -> false
+              end
+            end)
+
+          {result, "Struct not found in list using the given comparison"}
         end
 
       if in_list? do
@@ -465,8 +540,15 @@ defmodule Assertions do
         else
           comparison = keys_or_comparison
 
+          result =
+            try do
+              comparison.(left, right)
+            rescue
+              _ in [ExUnit.AssertionError] -> false
+            end
+
           {left_diff, right_diff, equal?} =
-            case comparison.(left, right) do
+            case result do
               {_, _, equal?} = result when is_boolean(equal?) -> result
               true_or_false when is_boolean(true_or_false) -> {left, right, true_or_false}
             end

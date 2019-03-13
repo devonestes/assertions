@@ -17,24 +17,36 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert!/1" do
+    @describetag :skip
     test "fails" do
-      assert!("A string")
+      assert! "A string"
+    end
+
+    test "fails because we're using > with nil" do
+      assert! nil > 10
     end
   end
 
   describe "refute!/1" do
+    @describetag :skip
     test "fails" do
-      refute!(nil)
+      refute! nil
+    end
+
+    test "fails because we're using > with nil" do
+      refute! nil > 10
     end
   end
 
   describe "assert_lists_equal/2" do
+    @describetag :skip
     test "fails" do
       assert_lists_equal([1, 2, 3], [1, 4, 2])
     end
   end
 
   describe "assert_lists_equal/3" do
+    @describetag :skip
     test "fails when the third argument is a custom message" do
       assert_lists_equal([1, 2, 3], [1, 4, 2], "Didn't match!")
     end
@@ -44,17 +56,8 @@ defmodule Assertions.FailureExamples do
     end
   end
 
-  describe "assert_lists_equal/4" do
-    test "fails" do
-      left = ["cat"]
-      right = ["lion"]
-      comparison = &(String.length(&1) == String.length(&2))
-      message = "Not the same length!"
-      assert_lists_equal(left, right, comparison, message)
-    end
-  end
-
   describe "assert_map_in_list/3" do
+    @describetag :skip
     test "fails with atom keys" do
       map = %{first: :first, second: :second, not: :used, keys: :are, always: :pruned}
       list = [%{first: :first, second: :third, third: :fourth, a: :b, d: :e}]
@@ -79,15 +82,50 @@ defmodule Assertions.FailureExamples do
 
   describe "assert_maps_equal/3" do
     test "fails" do
-      assert_maps_equal(
-        %{first: :first, second: :second},
-        %{first: :second, third: :third},
-        [:first]
-      )
+      left = %{:un => %{one: 1, two: %{eins: 1, zwei: 2, drei: 3}}, :trois => 3, :quatre => 4, :cinq => 5}
+      right = %{:un => %{one: 1, two: %{eins: 1, zwei: 2}}, "deux" => 2, :six => 6, :sept => 7}
+
+      assert_maps_equal(left, right, [:un, :deux])
+    end
+
+    test "fails with nice nested diffs" do
+      left = %{
+        :un => %{
+          one: 1,
+          two: %{
+            eins: 1,
+            zwei: 2,
+            drei: 3
+          }
+        },
+        :trois => 3,
+        :quatre => 4,
+        :cinq => 5
+      }
+
+      right = %{
+        :un => %{
+          one: 1,
+          two: %{
+            eins: 1,
+            zwei: 2
+          }
+        },
+        "deux" => 2,
+        :six => 6,
+        :sept => 7
+      }
+
+      keys = [{:un, [:one, [two: [:eins, drei: &numbers_equal?/2]]]}, {"deux", &Kernel.==/2}]
+
+      assert_maps_equal(left, right, keys)
     end
   end
 
+  defp numbers_equal?(l, r), do: l == r
+
   describe "assert_struct_in_list/3" do
+    @describetag :skip
     test "fails with struct/keys/list" do
       assert_struct_in_list(DateTime.utc_now(), [:year, :month], [Date.utc_today()])
     end
@@ -99,6 +137,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_structs_equal/3" do
+    @describetag :skip
     test "fails" do
       assert_structs_equal(
         DateTime.utc_now(),
@@ -109,6 +148,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_all_have_value/3" do
+    @describetag :skip
     test "fails" do
       list = [
         %{key: :value, other: :pair},
@@ -121,6 +161,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_changes_file/3" do
+    @describetag :skip
     test "fails when the file doesn't exist" do
       assert_changes_file @path, "hi" do
         File.write(@path, "hi")
@@ -151,6 +192,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_creates_file/2" do
+    @describetag :skip
     test "fails when the file exists before the function" do
       File.mkdir_p!(Path.dirname(@path))
       File.write(@path, "hi")
@@ -168,6 +210,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_deletes_file/2" do
+    @describetag :skip
     test "fails when the file doesn't exist before the function" do
       assert_deletes_file @path do
         File.mkdir_p!(Path.dirname(@path))
@@ -185,6 +228,7 @@ defmodule Assertions.FailureExamples do
   end
 
   describe "assert_receive_only/2" do
+    @describetag :skip
     test "fails if it receives no messages" do
       assert_receive_only(:hello, 1)
     end
