@@ -20,11 +20,19 @@ defmodule Assertions.FailureExamples do
     test "fails" do
       assert!("A string")
     end
+
+    test "fails when using nil" do
+      assert!(nil > 0)
+    end
   end
 
   describe "refute!/1" do
     test "fails" do
       refute!(nil)
+    end
+
+    test "fails when using nil" do
+      refute!(nil < 0)
     end
   end
 
@@ -41,16 +49,6 @@ defmodule Assertions.FailureExamples do
 
     test "fails when the third argument is a custom function" do
       assert_lists_equal(["cat"], ["lion"], &(String.length(&1) == String.length(&2)))
-    end
-  end
-
-  describe "assert_lists_equal/4" do
-    test "fails" do
-      left = ["cat"]
-      right = ["lion"]
-      comparison = &(String.length(&1) == String.length(&2))
-      message = "Not the same length!"
-      assert_lists_equal(left, right, comparison, message)
     end
   end
 
