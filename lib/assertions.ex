@@ -488,6 +488,40 @@ defmodule Assertions do
   end
 
   @doc """
+  Compares two maps like `assert_maps_equal/3` without raising an error when they don't match.
+  This is to be used with `assert_list_equal/3`.
+
+      iex> assert maps_equal(%{a: 0, b: 0, c: 0}, %{a: 0, b: 0, c: 0}, [:a, :b, :c])
+      true
+
+      iex> refute maps_equal(%{a: 0, b: 0, c: 0}, %{a: 1, b: 1, c: 1}, [:a, :b, :c])
+      false
+
+      iex> assert maps_equal(%{a: 1, b: 2, c: 3}, %{c: 3, a: 1, b: 2}, [:a, :b, :c, :x])
+      true
+
+      iex> assert maps_equal(%{a: 1, b: 2222, c: 3333}, %{a: 1, b: 2, c: 3}, [:a])
+      true
+
+      iex> refute maps_equal(%{a: 1, b: 2222, c: 3333}, %{a: 1, b: 2000, c: 3000}, [:b, :c])
+      false
+
+      iex> assert maps_equal(%{a: 0}, %{b: 0}, fn left, right -> left.a == right.b end)
+      true
+
+      iex> refute maps_equal( %{a: 0}, %{b: 9}, fn left, right -> left.a == right.b end )
+      false
+  """
+  @spec maps_equal(map(), map(), [atom()] | (term(), term() -> boolean)) :: boolean
+  def maps_equal(left, right, keys) when is_list(keys) do
+    Map.take(left, keys) == Map.take(right, keys)
+  end
+
+  def maps_equal(left, right, fun) when is_function(fun) do
+    fun.(left, right)
+  end
+
+  @doc """
   Asserts that all maps, structs or keyword lists in `list` have the same
   `value` for `key`.
 
