@@ -51,7 +51,13 @@ defmodule AssertionsTest do
     test "works when composed with other assertions" do
       list1 = [DateTime.utc_now(), DateTime.utc_now()]
       list2 = [DateTime.utc_now(), DateTime.utc_now()]
-      assert_lists_equal(list1, list2, &assert_structs_equal(&1, &2, [:year, :month]))
+      assert_lists_equal(list1, list2, &structs_equal(&1, &2, [:year, :month]))
+    end
+
+    test "works when list elements are in different order" do
+      list1 = [%{foo: 1}, %{foo: 2}, %{foo: 3}]
+      list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
+      assert_lists_equal(list1, list2, &maps_equal(&1, &2, [:foo]))
     end
   end
 
