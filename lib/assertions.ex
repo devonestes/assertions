@@ -558,11 +558,9 @@ defmodule Assertions do
       iex> refute structs_equal(date_time, date, [:month, :day])
       false
   """
-  @spec structs_equal(struct(), struct(), [atom()] | (term(), term() -> boolean)) ::
-          boolean()
+  @spec structs_equal(struct(), struct(), [atom()] | (term(), term() -> boolean)) :: boolean()
   def structs_equal(left, right, keys_or_function) do
-    left.__struct__ == right.__struct__ and
-      maps_equal(left, right, keys_or_function)
+    left.__struct__ == right.__struct__ and maps_equal(left, right, keys_or_function)
   end
 
   @doc """
