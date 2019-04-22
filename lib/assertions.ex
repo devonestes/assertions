@@ -522,6 +522,50 @@ defmodule Assertions do
   end
 
   @doc """
+  Compares two structs like `assert_structs_equal/3` without raising an error when they don't match.
+  This is to be used with `assert_list_equal/3`.
+
+      iex> assert structs_equal(
+      ...>   %Date{year: 2020, month: 3, day: 7},
+      ...>   %Date{year: 2020, month: 3, day: 7},
+      ...>   [:month, :day]
+      ...> )
+      true
+
+      iex> refute structs_equal(
+      ...>   %Date{year: 2020, month: 3, day: 7},
+      ...>   %Date{year: 2020, month: 3, day: 8},
+      ...>   [:month, :day]
+      ...> )
+      false
+
+      iex> assert structs_equal(
+      ...>   %Date{year: 2020, month: 3, day: 19},
+      ...>   %Date{year: 2020, month: 11, day: 3},
+      ...>   fn left, right -> left.month == right.day end
+      ...> )
+      true
+
+      iex> refute structs_equal(
+      ...>   %Date{year: 2020, month: 3, day: 19},
+      ...>   %Date{year: 2020, month: 11, day: 20},
+      ...>   fn left, right -> left.month == right.day end
+      ...> )
+      false
+
+      iex> assert %DateTime{} = date_time = DateTime.utc_now()
+      iex> assert %Date{} = date = struct(Date, Map.take(date_time, [:year, :month, :day]))
+      iex> refute structs_equal(date_time, date, [:month, :day])
+      false
+  """
+  @spec structs_equal(struct(), struct(), [atom()] | (term(), term() -> boolean)) ::
+          boolean()
+  def structs_equal(left, right, keys_or_function) do
+    left.__struct__ == right.__struct__ and
+      maps_equal(left, right, keys_or_function)
+  end
+
+  @doc """
   Asserts that all maps, structs or keyword lists in `list` have the same
   `value` for `key`.
 
