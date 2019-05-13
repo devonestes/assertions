@@ -81,6 +81,12 @@ defmodule AssertionsTest do
       assert output =~
                "\e[36mleft:  \e[0m[\e[31m\"cat\"\e[0m]\n     \e[36mright: \e[0m[\e[32m\"lion\"\e[0m]"
     end
+
+    test "works with comparisons that raise an error instead of returning false" do
+      list1 = [%{foo: 1}, %{foo: 2}, %{foo: 3}]
+      list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
+      assert_lists_equal(list1, list2, &assert_maps_equal(&1, &2, [:foo]))
+    end
   end
 
   describe "assert_structs_equal/3" do
@@ -99,6 +105,7 @@ defmodule AssertionsTest do
       end)
     end
   end
+
 
   defp run_tests do
     ExUnit.Server.modules_loaded()

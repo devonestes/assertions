@@ -19,7 +19,16 @@ defmodule Assertions.Comparisons do
 
   defp compare(left, right, comparison) do
     Enum.reduce(left, right, fn left_element, list ->
-      case Enum.find_index(list, &comparison.(left_element, &1)) do
+      result =
+        Enum.find_index(list, fn right_element -> 
+          try do
+            comparison.(left_element, right_element)
+          rescue 
+            _ in [ExUnit.AssertionError] -> false
+          end
+        end)
+
+      case result do
         nil -> list
         index -> List.delete_at(list, index)
       end

@@ -5,7 +5,7 @@ defmodule Assertions do
 
   alias Assertions.Comparisons
 
-  @type comparison :: (any, any -> boolean)
+  @type comparison :: (any, any -> boolean | no_return)
 
   @doc """
   Asserts that the return value of the given expression is `true`.
