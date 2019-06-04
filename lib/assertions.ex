@@ -260,7 +260,7 @@ defmodule Assertions do
           list = Enum.map(unquote(list), &Map.take(&1, keys))
           keys = unquote(stringify_list(keys_or_comparison))
           message = "Map matching the values for keys `#{keys}` not found"
-          {true, map, list, message}
+          {Enum.member?(list, map), map, list, message}
         else
           comparison = keys_or_comparison
           map = unquote(map)
