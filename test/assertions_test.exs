@@ -7,7 +7,7 @@ defmodule AssertionsTest do
 
   describe "assert!/1" do
     test "fails if either side of >, >=, < or <= is nil" do
-      assert! nil > 0
+      assert!(nil > 0)
     rescue
       error in [ExUnit.AssertionError] ->
         assert nil == error.left
@@ -19,7 +19,7 @@ defmodule AssertionsTest do
 
   describe "refute!/1" do
     test "fails if either side of >, >=, < or <= is nil" do
-      refute! nil > 0
+      refute!(nil > 0)
     rescue
       error in [ExUnit.AssertionError] ->
         assert nil == error.left
@@ -76,7 +76,6 @@ defmodule AssertionsTest do
       end)
     end
   end
-
 
   defp run_tests do
     ExUnit.Server.modules_loaded()
