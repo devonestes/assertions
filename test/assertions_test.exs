@@ -77,6 +77,27 @@ defmodule AssertionsTest do
     end
   end
 
+  describe "assert_raise/1" do
+    test "doesn't override ExUnit's assert_raise/2 or assert_raise/3" do
+      assert_raise(ExUnit.AssertionError, fn ->
+        assert_raise fn ->
+          first = 1
+          second = 2
+          first / second
+        end
+      end)
+
+      regex = ~r/Expected exception but nothing was raised/
+      assert_raise ExUnit.AssertionError, regex, fn ->
+        assert_raise fn ->
+          first = 1
+          second = 2
+          first / second
+        end
+      end
+    end
+  end
+
   defp run_tests do
     ExUnit.Server.modules_loaded()
     capture_io(fn -> ExUnit.run() end)

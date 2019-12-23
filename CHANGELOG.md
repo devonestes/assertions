@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0
+### Features
+* Added `assert_raise/1`, which is essentially a less strict version of the
+    builtin assertions `assert_raise/2` and `assert_raise/3`.
+
 ## 0.14.1
 ### Bugs
 * We had a bug where `assert_map_in_list/3` would always pass and would never
