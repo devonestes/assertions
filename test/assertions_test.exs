@@ -7,7 +7,7 @@ defmodule AssertionsTest do
 
   describe "assert!/1" do
     test "fails if either side of >, >=, < or <= is nil" do
-      assert! nil > 0
+      assert!(nil > 0)
     rescue
       error in [ExUnit.AssertionError] ->
         assert nil == error.left
@@ -19,7 +19,7 @@ defmodule AssertionsTest do
 
   describe "refute!/1" do
     test "fails if either side of >, >=, < or <= is nil" do
-      refute! nil > 0
+      refute!(nil > 0)
     rescue
       error in [ExUnit.AssertionError] ->
         assert nil == error.left
@@ -30,24 +30,6 @@ defmodule AssertionsTest do
   end
 
   describe "assert_lists_equal/2" do
-    @tag :skip
-    test "gives a really great error message" do
-      defmodule AssertListsEqual.Two do
-        use Assertions.Case, async: true
-
-        test "fails" do
-          assert_lists_equal([1, 2, 3], [1, 4, 2])
-        end
-      end
-
-      output = run_tests()
-      assert output =~ "Comparison of each element failed!"
-      assert output =~ "assert_lists_equal([1, 2, 3], [1, 4, 2])"
-
-      assert output =~
-               "arguments:\e[0m\n\n         # 1\n         [1, 2, 3]\n\n         # 2\n         [1, 4, 2]\n\n     \e[36mleft:  \e[0m[\e[31m3\e[0m]\n     \e[36mright: \e[0m[\e[32m4\e[0m]\n     \e[36m"
-    end
-
     test "works when composed with other assertions" do
       list1 = [DateTime.utc_now(), DateTime.utc_now()]
       list2 = [DateTime.utc_now(), DateTime.utc_now()]
@@ -56,36 +38,25 @@ defmodule AssertionsTest do
   end
 
   describe "assert_lists_equal/3" do
-    @tag :skip
-    test "gives a really great error messages" do
-      defmodule AssertListsEqual.Three do
-        use Assertions.Case, async: true
-
-        test "fails with comparison" do
-          left = ["dog", "cat"]
-          right = ["lion", "dog"]
-          assert_lists_equal(left, right, &(String.length(&1) == String.length(&2)))
-        end
-      end
-
-      output = run_tests()
-
-      assert output =~ "Comparison of each element failed!"
-
-      assert output =~
-               "assert_lists_equal(left, right, &(String.length(&1) == String.length(&2)))"
-
-      assert output =~
-               "arguments:\e[0m\n\n         # 1\n         [\"dog\", \"cat\"]\n\n         # 2\n         [\"lion\", \"dog\"]\n\n         # 3\n         #Function<"
-
-      assert output =~
-               "\e[36mleft:  \e[0m[\e[31m\"cat\"\e[0m]\n     \e[36mright: \e[0m[\e[32m\"lion\"\e[0m]"
-    end
-
     test "works with comparisons that raise an error instead of returning false" do
       list1 = [%{foo: 1}, %{foo: 2}, %{foo: 3}]
       list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
       assert_lists_equal(list1, list2, &assert_maps_equal(&1, &2, [:foo]))
+    end
+  end
+
+  describe "assert_map_in_list/3" do
+    test "fails with a list of keys to compare by" do
+      defmodule AssertMapInList do
+        use Assertions.Case, async: true
+
+        test "fails" do
+          assert_map_in_list(%{a: :b, c: :d}, [%{a: :b, c: :e}], [:a, :c])
+        end
+      end
+
+      output = run_tests()
+      assert output =~ "Map matching the values for keys `:a, :c` not found"
     end
   end
 
@@ -105,7 +76,6 @@ defmodule AssertionsTest do
       end)
     end
   end
-
 
   defp run_tests do
     ExUnit.Server.modules_loaded()

@@ -20,10 +20,10 @@ defmodule Assertions.Comparisons do
   defp compare(left, right, comparison) do
     Enum.reduce(left, right, fn left_element, list ->
       result =
-        Enum.find_index(list, fn right_element -> 
+        Enum.find_index(list, fn right_element ->
           try do
             comparison.(left_element, right_element)
-          rescue 
+          rescue
             _ in [ExUnit.AssertionError] -> false
           end
         end)

@@ -260,7 +260,7 @@ defmodule Assertions do
           list = Enum.map(unquote(list), &Map.take(&1, keys))
           keys = unquote(stringify_list(keys_or_comparison))
           message = "Map matching the values for keys `#{keys}` not found"
-          {true, map, list, message}
+          {Enum.member?(list, map), map, list, message}
         else
           comparison = keys_or_comparison
           map = unquote(map)
@@ -970,7 +970,7 @@ defmodule Assertions do
 
   defp collect_vars_from_pattern(expr) do
     Macro.prewalk(expr, [], fn
-      {:::, _, [left, _]}, acc ->
+      {:"::", _, [left, _]}, acc ->
         {[left], acc}
 
       {skip, _, [_]}, acc when skip in [:^, :@] ->
