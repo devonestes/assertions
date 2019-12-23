@@ -146,6 +146,29 @@ defmodule Assertions do
   end
 
   @doc """
+  Asserts that a function should raise an exception, but without forcing the user to specify which
+  exception should be raised. This is essentially a less-strict version of `assert_raise/2`.
+
+      iex> assert_raise(fn -> 1 / 0 end)
+      true
+      iex> assert_raise(fn -> String.to_existing_atom("asleimflisesliseli") end)
+      true
+  """
+  @spec assert_raise(fun()) :: true | no_return
+  def assert_raise(func) do
+    try do
+      func.()
+      ExUnit.Assertions.flunk("Expected exception but nothing was raised")
+    rescue
+      e in ExUnit.AssertionError ->
+        raise e
+
+      _ ->
+        true
+    end
+  end
+
+  @doc """
   Asserts that two lists contain the same elements without asserting they are
   in the same order.
 

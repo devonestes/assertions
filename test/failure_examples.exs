@@ -205,4 +205,14 @@ defmodule Assertions.FailureExamples do
       assert_receive_only(:hello)
     end
   end
+
+  describe "assert_raise/1" do
+    test "fails if the expression does not raise" do
+      assert_raise(fn ->
+        first = 1
+        second = 2
+        first / second
+      end)
+    end
+  end
 end
