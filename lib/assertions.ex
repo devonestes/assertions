@@ -149,8 +149,6 @@ defmodule Assertions do
   Asserts that a function should raise an exception, but without forcing the user to specify which
   exception should be raised. This is essentially a less-strict version of `assert_raise/2`.
 
-      iex> assert_raise(fn -> 1 / 0 end)
-      true
       iex> assert_raise(fn -> String.to_existing_atom("asleimflisesliseli") end)
       true
   """
@@ -779,6 +777,7 @@ defmodule Assertions do
   @spec assert_receive_only(Macro.expr(), non_neg_integer) :: any | no_return
   defmacro assert_receive_only(pattern, timeout \\ 100) do
     binary = Macro.to_string(pattern)
+    caller = __CALLER__
 
     assertion =
       assertion(
@@ -787,56 +786,14 @@ defmodule Assertions do
         end
       )
 
-    caller = __CALLER__
+    expanded_pattern = expand_pattern(pattern, caller)
+    vars = collect_vars_from_pattern(expanded_pattern)
 
-    # Expand before extracting metadata
-    pattern = expand_pattern(pattern, caller)
-    vars = collect_vars_from_pattern(pattern)
-    pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
-
-    pattern =
-      case pattern do
-        {:when, meta, [left, right]} ->
-          {:when, meta, [quote(do: unquote(left) = received), right]}
-
-        left ->
-          quote(do: unquote(left) = received)
-      end
-
-    quoted_pattern =
-      quote do
-        case message do
-          unquote(pattern) ->
-            _ = unquote(vars)
-            true
-
-          _ ->
-            false
-        end
-      end
-
-    pattern_finder =
-      quote do
-        fn message ->
-          unquote(suppress_warning(quoted_pattern))
-        end
-      end
-
-    timeout =
-      if is_integer(timeout) do
-        timeout
+    {timeout, pattern, failure_message} =
+      if function_exported?(ExUnit.Assertions, :__timeout__, 4) do
+        assert_receive_data(:old, pattern, expanded_pattern, timeout, caller, vars, binary)
       else
-        quote do: ExUnit.Assertions.__timeout__(unquote(timeout))
-      end
-
-    failure_message =
-      quote do
-        ExUnit.Assertions.__timeout__(
-          unquote(binary),
-          unquote(pins),
-          unquote(pattern_finder),
-          timeout
-        )
+        assert_receive_data(:new, pattern, expanded_pattern, timeout, caller, vars, binary)
       end
 
     bind_variables =
@@ -872,6 +829,92 @@ defmodule Assertions do
 
       true
     end
+  end
+
+  defp assert_receive_data(:old, pattern, _, timeout, caller, vars, binary) do
+    pins = collect_pins_from_pattern(pattern, Macro.Env.vars(caller))
+    {pattern, pattern_finder} = patterns(pattern, vars)
+
+    timeout =
+      if is_integer(timeout) do
+        timeout
+      else
+        quote do: ExUnit.Assertions.__timeout__(unquote(timeout))
+      end
+
+    failure_message =
+      quote do
+        ExUnit.Assertions.__timeout__(
+          unquote(binary),
+          unquote(pins),
+          unquote(pattern_finder),
+          timeout
+        )
+      end
+
+    {timeout, pattern, failure_message}
+  end
+
+  defp assert_receive_data(:new, pattern, expanded_pattern, timeout, caller, vars, _) do
+    code = escape_quoted(:assert_receive_only, pattern)
+    pins = collect_pins_from_pattern(expanded_pattern, Macro.Env.vars(caller))
+    {pattern, pattern_finder} = patterns(expanded_pattern, vars)
+
+    timeout =
+      if function_exported?(ExUnit.Assertions, :__timeout__, 2) do
+        quote do
+          ExUnit.Assertions.__timeout__(unquote(timeout), :assert_receive_timeout)
+        end
+      else
+        quote do
+          ExUnit.Assertions.__timeout__(unquote(timeout))
+        end
+      end
+
+    failure_message =
+      quote do
+        ExUnit.Assertions.__timeout__(
+          unquote(Macro.escape(expanded_pattern)),
+          unquote(code),
+          unquote(pins),
+          unquote(pattern_finder),
+          timeout
+        )
+      end
+
+    {timeout, pattern, failure_message}
+  end
+
+  defp patterns(pattern, vars) do
+    pattern =
+      case pattern do
+        {:when, meta, [left, right]} ->
+          {:when, meta, [quote(do: unquote(left) = received), right]}
+
+        left ->
+          quote(do: unquote(left) = received)
+      end
+
+    quoted_pattern =
+      quote do
+        case message do
+          unquote(pattern) ->
+            _ = unquote(vars)
+            true
+
+          _ ->
+            false
+        end
+      end
+
+    pattern_finder =
+      quote do
+        fn message ->
+          unquote(suppress_warning(quoted_pattern))
+        end
+      end
+
+    {pattern, pattern_finder}
   end
 
   @doc """
