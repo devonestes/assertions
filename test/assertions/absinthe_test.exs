@@ -22,7 +22,7 @@ defmodule Nested.PetsSchema do
       resolve(fn _, _, _ -> {:ok, "Miki"} end)
     end
 
-    field :owner, :person do
+    field :person, :person, name: "owner" do
       resolve(fn _, _, _ ->
         {:ok, %{name: "Name"}}
       end)
@@ -53,7 +53,11 @@ defmodule Assertions.AbsintheTest do
     end
 
     test "returns a tuple for object child types, default nesting of 3" do
-      expected = [{:owner, [:name, {:dogs, [:name, :__typename]}, :__typename]}, :name, :__typename]
+      expected = [
+        {:owner, [:name, {:dogs, [:name, :__typename]}, :__typename]},
+        :name,
+        :__typename
+      ]
 
       assert_lists_equal(fields_for(:dog), expected)
     end
@@ -61,18 +65,79 @@ defmodule Assertions.AbsintheTest do
 
   describe "fields_for/2" do
     test "allows you to set the level of nesting of child types" do
-      expected = [:name, {:dogs, [:name, :__typename]}, :__typename]
+      expected = [
+        :name,
+        {:dogs, [
+          :name,
+          :__typename
+        ]},
+        :__typename
+      ]
 
       assert_lists_equal(fields_for(:person, 2), expected)
 
       expected = [
-           {:owner,
-            [:name, {:dogs, [{:owner, [:name, {:dogs, [:name, :__typename]}, :__typename]}, :name, :__typename]}, :__typename]},
+        {:owner, [
            :name,
+           {:dogs, [
+             {:owner, [
+               :name,
+               {:dogs, [
+                 :name,
+                 :__typename
+               ]},
+               :__typename
+             ]},
+             :name,
+             :__typename
+           ]},
            :__typename
-         ]
+         ]},
+        :name,
+        :__typename
+      ]
 
       assert_lists_equal(fields_for(:dog, 5), expected)
+    end
+  end
+
+  describe "document_for/1" do
+    test "returns a properly formatted document that can be used as a query" do
+      expected = """
+      cat {
+        weight
+        name
+        favoriteToy
+        __typename
+      }
+      """
+
+      assert document_for(:cat) == expected
+    end
+  end
+
+  describe "document_for/2" do
+    test "allows the user to set the level of nesting" do
+      expected = """
+      dog {
+        owner {
+          name
+          dogs {
+            owner {
+              name
+              __typename
+            }
+            name
+            __typename
+          }
+          __typename
+        }
+        name
+        __typename
+      }
+      """
+
+      assert document_for(:dog, 4) == expected
     end
   end
 

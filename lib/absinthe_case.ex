@@ -19,6 +19,10 @@ defmodule Assertions.AbsintheCase do
       def fields_for(type, nesting \\ 3) do
         fields_for(unquote(schema), type, nesting)
       end
+
+      def document_for(type, nesting \\ 3) do
+        document_for(unquote(schema), type, nesting)
+      end
     end
   end
 end
