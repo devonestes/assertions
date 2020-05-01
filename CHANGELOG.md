@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.0
+### Features
+* Added `Assertions.AbsintheCase`
+* Added `Assertions.Absinthe.fields_for/2,3` to generate a list of fields for a type and all
+    sub-types to a given depth of nesting.
+* Added `Assertions.Absinthe.document_for/2,3` to generate a document with all fields for a type 
+    and all sub-types to a given depth of nesting.
+* Added `Assertions.Absinthe.assert_response_equals/2,3,4` to assert the response of sending a
+    document equals a given expected result.
+* Added `Assertions.Absinthe.assert_response_matchess/2,3,4` to assert the response of sending a
+    document matches a given pattern.
+
 ## 0.15.0
 ### Features
 * Added `assert_raise/1`, which is essentially a less strict version of the
