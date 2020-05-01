@@ -23,6 +23,31 @@ defmodule Assertions.AbsintheCase do
       def document_for(type, nesting \\ 3) do
         document_for(unquote(schema), type, nesting)
       end
+
+      def assert_response_equals(document, expected_response, options) when is_list(options) do
+        assert_response_equals(unquote(schema), document, expected_response, options)
+      end
+
+      def assert_response_equals(schema, document, expected_response) do
+        assert_response_equals(schema, document, expected_response, [])
+      end
+
+      def assert_response_equals(document, expected_response) do
+        assert_response_equals(unquote(schema), document, expected_response, [])
+      end
+
+      defmacro assert_response_matches(document, options \\ [], expr) do
+        schema = unquote(schema)
+
+        quote do
+          assert_response_matches(
+            unquote(schema),
+            unquote(document),
+            unquote(options),
+            unquote(expr)
+          )
+        end
+      end
     end
   end
 end

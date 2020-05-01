@@ -7,7 +7,7 @@ defmodule Nested.PetsSchema do
     end
 
     field :dogs, non_null(list_of(:dog)) do
-      fn _, _, _ -> {:ok, [%{name: "Miki"}, %{name: "Crusher"}]} end
+      resolve(fn _, _, _ -> {:ok, [%{}, %{}]} end)
     end
   end
 
@@ -23,19 +23,30 @@ defmodule Nested.PetsSchema do
     end
 
     field :person, :person, name: "owner" do
-      resolve(fn _, _, _ ->
-        {:ok, %{name: "Name"}}
-      end)
+      resolve(fn _, _, _ -> {:ok, %{}} end)
     end
+  end
+
+  input_object :add_person_input do
+    field(:name, :string)
   end
 
   query do
     field :person, :person do
       arg(:name, :string)
+      resolve(fn _, _, _ -> {:ok, %{}} end)
     end
 
     field :dog, :dog do
       arg(:name, :string)
+      resolve(fn _, _, _ -> {:ok, %{}} end)
+    end
+  end
+
+  mutation do
+    field :add_person, :person do
+      arg(:input, :add_person_input)
+      resolve(fn _, _, _ -> {:ok, %{}} end)
     end
   end
 end
@@ -67,30 +78,35 @@ defmodule Assertions.AbsintheTest do
     test "allows you to set the level of nesting of child types" do
       expected = [
         :name,
-        {:dogs, [
-          :name,
-          :__typename
-        ]},
+        {:dogs,
+         [
+           :name,
+           :__typename
+         ]},
         :__typename
       ]
 
       assert_lists_equal(fields_for(:person, 2), expected)
 
       expected = [
-        {:owner, [
+        {:owner,
+         [
            :name,
-           {:dogs, [
-             {:owner, [
-               :name,
-               {:dogs, [
+           {:dogs,
+            [
+              {:owner,
+               [
                  :name,
+                 {:dogs,
+                  [
+                    :name,
+                    :__typename
+                  ]},
                  :__typename
                ]},
-               :__typename
-             ]},
-             :name,
-             :__typename
-           ]},
+              :name,
+              :__typename
+            ]},
            :__typename
          ]},
         :name,
@@ -104,12 +120,10 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/1" do
     test "returns a properly formatted document that can be used as a query" do
       expected = """
-      cat {
         weight
         name
         favoriteToy
         __typename
-      }
       """
 
       assert document_for(:cat) == expected
@@ -119,7 +133,6 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/2" do
     test "allows the user to set the level of nesting" do
       expected = """
-      dog {
         owner {
           name
           dogs {
@@ -134,7 +147,6 @@ defmodule Assertions.AbsintheTest do
         }
         name
         __typename
-      }
       """
 
       assert document_for(:dog, 4) == expected
@@ -142,40 +154,28 @@ defmodule Assertions.AbsintheTest do
   end
 
   describe "assert_response_equals/3" do
-    @describetag :skip
     test "passes when it should" do
-      query = """
-        {
-          dog {
-            name
-            owner {
-              name
-              dogs {
-                name
-                owner {
-                  name
-                }
-              }
-            }
-          }
-        }
-      """
-
       expected_response = %{
         "dog" => %{
           "name" => "Miki",
+          "__typename" => "Dog",
           "owner" => %{
             "name" => "Name",
+            "__typename" => "Person",
             "dogs" => [
               %{
+                "__typename" => "Dog",
                 "name" => "Miki",
                 "owner" => %{
+                  "__typename" => "Person",
                   "name" => "Name"
                 }
               },
               %{
-                "name" => "Crusher",
+                "__typename" => "Dog",
+                "name" => "Miki",
                 "owner" => %{
+                  "__typename" => "Person",
                   "name" => "Name"
                 }
               }
@@ -184,17 +184,260 @@ defmodule Assertions.AbsintheTest do
         }
       }
 
-      assert query == expected_response
+      query = """
+      {
+        dog {
+          #{document_for(:dog, 4)}
+        }
+      }
+      """
 
-      # assert_response_equals(query, expected_response)
+      assert_response_equals(query, expected_response)
     end
 
-    test "fails when it should"
+    test "works with mutations when we need to pass variables and context" do
+      expected_response = %{
+        "addPerson" => %{
+          "name" => "Name",
+          "__typename" => "Person",
+          "dogs" => [
+            %{
+              "__typename" => "Dog",
+              "name" => "Miki"
+            },
+            %{
+              "__typename" => "Dog",
+              "name" => "Miki"
+            }
+          ]
+        }
+      }
+
+      mutation = """
+      mutation AddPerson($input: AddPersonInput!) {
+        addPerson(input: $input) {
+          #{document_for(:person, 2)}
+        }
+      }
+      """
+
+      variables = %{
+        "input" => %{
+          "name" => "Person"
+        }
+      }
+
+      assert_response_equals(mutation, expected_response, variables: variables, context: %{})
+    end
+
+    test "fails when it should" do
+      expected_response = %{
+        "dog" => %{
+          "name" => "Miki",
+          "owner" => %{
+            "name" => "Name",
+            "__typename" => "Person",
+            "dogs" => [
+              %{
+                "__typename" => "Dog",
+                "name" => "Miki",
+                "owner" => %{
+                  "__typename" => "Person",
+                  "name" => "Name"
+                }
+              },
+              %{
+                "__typename" => "Dog",
+                "name" => "Miki",
+                "owner" => %{
+                  "__typename" => "Person",
+                  "name" => "Name"
+                }
+              }
+            ]
+          }
+        }
+      }
+
+      query = """
+      {
+        dog {
+          #{document_for(:dog, 4)}
+        }
+      }
+      """
+
+      assert_response_equals(query, expected_response)
+    rescue
+      error in [ExUnit.AssertionError] ->
+        assert error.left == %{
+                 "dog" => %{
+                   "name" => "Miki",
+                   "owner" => %{
+                     "__typename" => "Person",
+                     "dogs" => [
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       },
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       }
+                     ],
+                     "name" => "Name"
+                   },
+                   "__typename" => "Dog"
+                 }
+               }
+
+        assert error.right == %{
+                 "dog" => %{
+                   "name" => "Miki",
+                   "owner" => %{
+                     "name" => "Name",
+                     "__typename" => "Person",
+                     "dogs" => [
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{
+                           "__typename" => "Person",
+                           "name" => "Name"
+                         }
+                       },
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{
+                           "__typename" => "Person",
+                           "name" => "Name"
+                         }
+                       }
+                     ]
+                   }
+                 }
+               }
+
+        #assert error.message == "Response did not match the expected response"
+
+        #assert ~S/assert_response_equals("{\n#{document_for(:dog, 4)}\n}", expected_response)/ ==
+                 #Macro.to_string(error.expr)
+    end
   end
 
   describe "assert_response_matches/3" do
-    @describetag :skip
-    test "passes when it should"
-    test "fails when it should"
+    test "binds variables outside of the scope of the match" do
+      query = """
+      {
+        dog {
+          #{document_for(:dog, 4)}
+        }
+      }
+      """
+
+      assert_response_matches(query, do: %{"dog" => dog})
+
+      assert %{
+               "name" => _,
+               "__typename" => "Do" <> _,
+               "owner" => %{
+                 "name" => "Na" <> "me",
+                 "__typename" => "Person",
+                 "dogs" => dogs
+               }
+             } = dog
+
+      assert [
+               %{
+                 "name" => "Miki",
+                 "owner" => %{
+                   "__typename" => "Person",
+                   "name" => "Name"
+                 }
+               },
+               %{
+                 "owner" => %{
+                   "__typename" => "Person",
+                   "name" => "Name"
+                 }
+               }
+             ] = dogs
+    end
+
+    test "fails when it should" do
+      query = """
+      {
+        dog {
+          #{document_for(:dog, 4)}
+        }
+      }
+      """
+
+      dog_type = "Dog"
+
+      assert_response_matches(query) do
+        %{
+          "dog" => %{
+            "name" => ^dog_type,
+            "__typename" => "Do" <> _,
+            "owner" => %{
+              "name" => "Na" <> "me",
+              "__typename" => "Person",
+              "dogs" => [
+                %{
+                  "__typename" => ^dog_type,
+                  "name" => "Miki",
+                  "owner" => %{
+                    "__typename" => "Person",
+                    "name" => "Name"
+                  }
+                },
+                %{
+                  "__typename" => ^dog_type,
+                  "owner" => %{
+                    "__typename" => "Person",
+                    "name" => "Name"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      end
+    rescue
+      error in [ExUnit.AssertionError] ->
+        assert Macro.to_string(error.left) ==
+                 ~s/%{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"dogs\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}]}}}/
+
+        assert error.right == %{
+                 "dog" => %{
+                   "name" => "Miki",
+                   "owner" => %{
+                     "__typename" => "Person",
+                     "dogs" => [
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       },
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       }
+                     ],
+                     "name" => "Name"
+                   },
+                   "__typename" => "Dog"
+                 }
+               }
+
+        #assert error.message == "Response did not match the expected response"
+
+        #assert ~S/assert_response_matches(query)/ == Macro.to_string(error.expr)
+    end
   end
 end
