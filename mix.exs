@@ -38,7 +38,8 @@ defmodule Assertions.MixProject do
   defp deps() do
     [
       {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false},
-      {:ecto, "~> 3.3", only: [:dev, :test], runtime: false}
+      {:ecto, "~> 3.3", only: [:dev, :test], runtime: false},
+      {:absinthe, "~> 1.5.0-rc.5", only: [:dev, :test], runtime: false}
     ]
   end
 end
