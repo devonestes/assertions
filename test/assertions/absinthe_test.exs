@@ -1,23 +1,30 @@
 defmodule Nested.PetsSchema do
   use Absinthe.Schema
 
+  interface :pet do
+    field(:name, :string)
+    resolve_type(fn _, _ -> :dog end)
+  end
+
   object :person do
     field :name, :string do
       resolve(fn _, _, _ -> {:ok, "Name"} end)
     end
 
-    field :dogs, non_null(list_of(:dog)) do
+    field :pets, non_null(list_of(:pet)) do
       resolve(fn _, _, _ -> {:ok, [%{}, %{}]} end)
     end
   end
 
   object :cat do
+    interface(:pet)
     field(:name, :string)
     field(:favorite_toy, :string)
     field(:weight, :integer)
   end
 
   object :dog do
+    interface(:pet)
     field :name, :string do
       resolve(fn _, _, _ -> {:ok, "Miki"} end)
     end
@@ -65,7 +72,7 @@ defmodule Assertions.AbsintheTest do
 
     test "returns a tuple for object child types, default nesting of 3" do
       expected = [
-        {:owner, [:name, {:dogs, [:name, :__typename]}, :__typename]},
+        {:owner, [:name, {:pets, [:name, :__typename]}, :__typename]},
         :name,
         :__typename
       ]
@@ -78,7 +85,7 @@ defmodule Assertions.AbsintheTest do
     test "allows you to set the level of nesting of child types" do
       expected = [
         :name,
-        {:dogs,
+        {:pets,
          [
            :name,
            :__typename
@@ -92,12 +99,12 @@ defmodule Assertions.AbsintheTest do
         {:owner,
          [
            :name,
-           {:dogs,
+           {:pets,
             [
               {:owner,
                [
                  :name,
-                 {:dogs,
+                 {:pets,
                   [
                     :name,
                     :__typename
@@ -134,15 +141,21 @@ defmodule Assertions.AbsintheTest do
     test "allows the user to set the level of nesting" do
       expected = """
         owner {
-          name
-          dogs {
-            owner {
-              name
-              __typename
+          pets {
+            ...on Dog {
+              owner {
+                name
+                __typename
+              }
+            }
+            ...on Cat {
+              weight
+              favoriteToy
             }
             name
             __typename
           }
+          name
           __typename
         }
         name
@@ -162,7 +175,7 @@ defmodule Assertions.AbsintheTest do
           "owner" => %{
             "name" => "Name",
             "__typename" => "Person",
-            "dogs" => [
+            "pets" => [
               %{
                 "__typename" => "Dog",
                 "name" => "Miki",
@@ -200,7 +213,7 @@ defmodule Assertions.AbsintheTest do
         "addPerson" => %{
           "name" => "Name",
           "__typename" => "Person",
-          "dogs" => [
+          "pets" => [
             %{
               "__typename" => "Dog",
               "name" => "Miki"
@@ -237,7 +250,7 @@ defmodule Assertions.AbsintheTest do
           "owner" => %{
             "name" => "Name",
             "__typename" => "Person",
-            "dogs" => [
+            "pets" => [
               %{
                 "__typename" => "Dog",
                 "name" => "Miki",
@@ -275,7 +288,7 @@ defmodule Assertions.AbsintheTest do
                    "name" => "Miki",
                    "owner" => %{
                      "__typename" => "Person",
-                     "dogs" => [
+                     "pets" => [
                        %{
                          "__typename" => "Dog",
                          "name" => "Miki",
@@ -299,7 +312,7 @@ defmodule Assertions.AbsintheTest do
                    "owner" => %{
                      "name" => "Name",
                      "__typename" => "Person",
-                     "dogs" => [
+                     "pets" => [
                        %{
                          "__typename" => "Dog",
                          "name" => "Miki",
@@ -346,7 +359,7 @@ defmodule Assertions.AbsintheTest do
                "owner" => %{
                  "name" => "Na" <> "me",
                  "__typename" => "Person",
-                 "dogs" => dogs
+                 "pets" => pets
                }
              } = dog
 
@@ -364,7 +377,7 @@ defmodule Assertions.AbsintheTest do
                    "name" => "Name"
                  }
                }
-             ] = dogs
+             ] = pets
     end
 
     test "fails when it should" do
@@ -386,7 +399,7 @@ defmodule Assertions.AbsintheTest do
             "owner" => %{
               "name" => "Na" <> "me",
               "__typename" => "Person",
-              "dogs" => [
+              "pets" => [
                 %{
                   "__typename" => ^dog_type,
                   "name" => "Miki",
@@ -410,14 +423,14 @@ defmodule Assertions.AbsintheTest do
     rescue
       error in [ExUnit.AssertionError] ->
         assert Macro.to_string(error.left) ==
-                 ~s/%{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"dogs\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}]}}}/
+                 ~s/%{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"pets\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}]}}}/
 
         assert error.right == %{
                  "dog" => %{
                    "name" => "Miki",
                    "owner" => %{
                      "__typename" => "Person",
-                     "dogs" => [
+                     "pets" => [
                        %{
                          "__typename" => "Dog",
                          "name" => "Miki",

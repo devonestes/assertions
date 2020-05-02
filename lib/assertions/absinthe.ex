@@ -125,6 +125,18 @@ defmodule Assertions.Absinthe do
     :reject
   end
 
+  defp get_fields(%Absinthe.Type.Interface{fields: fields} = type, schema, nesting) do
+    implementors = Map.get(schema.__absinthe_interface_implementors__(), type.identifier)
+    IO.inspect(implementors)
+    Enum.reduce(fields, [], fn {_, value}, acc ->
+      case fields_for(schema, value.type, nesting - 1) do
+        :reject -> acc
+        :scalar -> [String.to_atom(value.name) | acc]
+        list -> [{String.to_atom(value.name), list} | acc]
+      end
+    end)
+  end
+
   defp get_fields(%{fields: fields}, schema, nesting) do
     Enum.reduce(fields, [], fn {_, value}, acc ->
       case fields_for(schema, value.type, nesting - 1) do
