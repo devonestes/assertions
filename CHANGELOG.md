@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.1
+### Bugs
+* Fixed bug with interfaces and unions not showing correctly in
+    `Assertions.Absinthe.fields_for/2,3` and `Assertions.Absinthe.document_for/2,3`.
+
 ## 0.16.0
 ### Features
 * Added `Assertions.AbsintheCase`
