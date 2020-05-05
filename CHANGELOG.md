@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.2
+### Bugs
+* Fixed bug that caused applications that don't use Absinthe to fail to compile.
+
 ## 0.16.1
 ### Bugs
 * Fixed bug with interfaces and unions not showing correctly in

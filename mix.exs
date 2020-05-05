@@ -4,7 +4,7 @@ defmodule Assertions.MixProject do
   def project do
     [
       app: :assertions,
-      version: "0.16.1",
+      version: "0.16.2",
       elixir: "~> 1.7",
       deps: deps(),
       description: description(),
