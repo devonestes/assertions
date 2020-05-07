@@ -6,6 +6,11 @@ defmodule Nested.PetsSchema do
     resolve_type(fn _, _ -> :dog end)
   end
 
+  interface :doggo do
+    field(:name, :string)
+    resolve_type(fn _, _ -> :dog end)
+  end
+
   union :animal do
     types([:dog, :cat])
     resolve_type(fn _, _ -> :cat end)
@@ -34,6 +39,7 @@ defmodule Nested.PetsSchema do
 
   object :dog do
     interface(:pet)
+    interface(:doggo)
 
     field :name, :string do
       resolve(fn _, _, _ -> {:ok, "Miki"} end)
@@ -259,6 +265,22 @@ defmodule Assertions.AbsintheTest do
 
       assert document_for(:dog, 4) == expected
     end
+
+    test "works with interfaces with a single implementor" do
+      expected = """
+        name
+        __typename
+        ...on Dog {
+          owner {
+            name
+            __typename
+          }
+          __typename
+        }
+      """
+
+      assert document_for(:doggo, 2) == expected
+    end
   end
 
   describe "assert_response_equals/3" do
@@ -288,7 +310,9 @@ defmodule Assertions.AbsintheTest do
                 }
               }
             ],
-            "animals" => [%{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}]
+            "animals" => [
+              %{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}
+            ]
           }
         }
       }
@@ -319,7 +343,9 @@ defmodule Assertions.AbsintheTest do
               "name" => "Miki"
             }
           ],
-          "animals" => [%{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}]
+          "animals" => [
+            %{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}
+          ]
         }
       }
 
@@ -381,20 +407,35 @@ defmodule Assertions.AbsintheTest do
     rescue
       error in [ExUnit.AssertionError] ->
         assert error.left == %{
-              "dog" => %{
-                "__typename" => "Dog",
-                "name" => "Miki",
-                "owner" => %{
-                  "__typename" => "Person",
-                  "name" => "Name",
-                  "pets" => [
-                    %{"__typename" => "Dog", "name" => "Miki", "owner" => %{"__typename" => "Person", "name" => "Name"}},
-                    %{"__typename" => "Dog", "name" => "Miki", "owner" => %{"__typename" => "Person", "name" => "Name"}}
-                  ],
-                  "animals" => [%{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}]
-                }
-              }
-            }
+                 "dog" => %{
+                   "__typename" => "Dog",
+                   "name" => "Miki",
+                   "owner" => %{
+                     "__typename" => "Person",
+                     "name" => "Name",
+                     "pets" => [
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       },
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       }
+                     ],
+                     "animals" => [
+                       %{
+                         "__typename" => "Cat",
+                         "favoriteToy" => nil,
+                         "name" => nil,
+                         "weight" => nil
+                       }
+                     ]
+                   }
+                 }
+               }
 
         assert error.right == %{
                  "dog" => %{
@@ -506,8 +547,9 @@ defmodule Assertions.AbsintheTest do
                   }
                 }
               ],
-
-          "animals" => [%{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}]
+              "animals" => [
+                %{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}
+              ]
             }
           }
         }
@@ -515,24 +557,38 @@ defmodule Assertions.AbsintheTest do
     rescue
       error in [ExUnit.AssertionError] ->
         assert Macro.to_string(error.left) ==
-"%{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"pets\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}], \"animals\" => [%{\"__typename\" => \"Cat\", \"favoriteToy\" => nil, \"name\" => nil, \"weight\" => nil}]}}}"
+                 "%{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"pets\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}], \"animals\" => [%{\"__typename\" => \"Cat\", \"favoriteToy\" => nil, \"name\" => nil, \"weight\" => nil}]}}}"
 
         assert error.right == %{
-              "dog" => %{
-                "__typename" => "Dog",
-                "name" => "Miki",
-                "owner" => %{
-                  "__typename" => "Person",
-                  "name" => "Name",
-                  "pets" => [
-                    %{"__typename" => "Dog", "name" => "Miki", "owner" => %{"__typename" => "Person", "name" => "Name"}},
-                    %{"__typename" => "Dog", "name" => "Miki", "owner" => %{"__typename" => "Person", "name" => "Name"}}
-                  ],
-                  "animals" => [%{"__typename" => "Cat", "favoriteToy" => nil, "name" => nil, "weight" => nil}]
-                }
-              }
-            }
-
+                 "dog" => %{
+                   "__typename" => "Dog",
+                   "name" => "Miki",
+                   "owner" => %{
+                     "__typename" => "Person",
+                     "name" => "Name",
+                     "pets" => [
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       },
+                       %{
+                         "__typename" => "Dog",
+                         "name" => "Miki",
+                         "owner" => %{"__typename" => "Person", "name" => "Name"}
+                       }
+                     ],
+                     "animals" => [
+                       %{
+                         "__typename" => "Cat",
+                         "favoriteToy" => nil,
+                         "name" => nil,
+                         "weight" => nil
+                       }
+                     ]
+                   }
+                 }
+               }
 
         # assert error.message == "Response did not match the expected response"
 

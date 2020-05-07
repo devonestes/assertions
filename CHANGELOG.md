@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.3
+### Bugs
+* Fixed bug that caused interfaces with a single implementor to fail when using `document_for/2,3`
+
 ## 0.16.2
 ### Bugs
 * Fixed bug that caused applications that don't use Absinthe to fail to compile.
