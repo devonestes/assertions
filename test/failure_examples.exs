@@ -50,6 +50,22 @@ defmodule Assertions.FailureExamples do
     test "fails when the third argument is a custom function" do
       assert_lists_equal(["cat"], ["lion"], &(String.length(&1) == String.length(&2)))
     end
+
+    test "fails nicely with a list of maps" do
+      left = [
+        %{first: :first, second: :third},
+        %{four: 4, five: "five"},
+        %{"six" => :six, "seven" => 7}
+      ]
+
+      right = [
+        %{first: :first, second: :third},
+        %{four: "four", five: "five"},
+        %{"six" => :six, "seven" => 7}
+      ]
+
+      assert_lists_equal(left, right, &assert_maps_equal(&1, &2, Map.keys(&2)))
+    end
   end
 
   describe "assert_map_in_list/3" do

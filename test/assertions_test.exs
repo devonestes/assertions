@@ -43,6 +43,60 @@ defmodule AssertionsTest do
       list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
       assert_lists_equal(list1, list2, &assert_maps_equal(&1, &2, [:foo]))
     end
+
+    test "keeps the right ordering in the comparison function" do
+      list1 = [:a, :c, :b, :d]
+      list2 = ["a", "b", "c", "d"]
+      assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+    end
+
+    test "fails correctly with non-equal sized lists" do
+      list1 = [:a, :c, :b, :d, :e]
+      list2 = ["a", "b", "c", "d"]
+
+      try do
+        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        flunk("Should have failed")
+      rescue
+        e in [ExUnit.AssertionError] ->
+          assert e.left == [:e]
+          assert e.right == []
+      end
+
+      list1 = [:a, :c, :b, :d]
+      list2 = ["a", "b", "c", "d", "d"]
+
+      try do
+        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        flunk("Should have failed")
+      rescue
+        e in [ExUnit.AssertionError] ->
+          assert e.left == []
+          assert e.right == ["d"]
+      end
+
+      list1 = [:a, :d]
+      list2 = ["a", "a", "b", "c", "c"]
+
+      try do
+        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        flunk("Should have failed")
+      rescue
+        e in [ExUnit.AssertionError] ->
+          assert e.left == [:d]
+          assert e.right == ["a", "b", "c", "c"]
+      end
+    end
+  end
+
+  describe "assert_maps_equal/3" do
+    test "works with custom functions" do
+      assert_maps_equal(
+        %{a: :b},
+        %{b: "b"},
+        &(Map.get(&1, :a) == String.to_atom(Map.get(&2, :b)))
+      )
+    end
   end
 
   describe "assert_map_in_list/3" do

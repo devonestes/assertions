@@ -12,26 +12,27 @@ defmodule Assertions.Comparisons do
   @doc false
   def compare_lists(left, right, comparison \\ &Kernel.==/2)
       when is_list(left) and is_list(right) do
-    left_diff = compare(right, left, comparison)
-    right_diff = compare(left, right, comparison)
-    {left_diff, right_diff, left_diff == right_diff}
+    {left_diff, right_diff} =
+      Enum.reduce(1..length(left), {left, right}, &compare(&1, &2, comparison))
+
+    {left_diff, right_diff, left_diff == [] and right_diff == []}
   end
 
-  defp compare(left, right, comparison) do
-    Enum.reduce(left, right, fn left_element, list ->
-      result =
-        Enum.find_index(list, fn right_element ->
-          try do
-            comparison.(left_element, right_element)
-          rescue
-            _ in [ExUnit.AssertionError] -> false
-          end
-        end)
+  defp compare(_, {[left_elem | left_acc], right_acc}, comparison) do
+    result =
+      Enum.find_index(right_acc, fn right_elem ->
+        try do
+          comparison.(left_elem, right_elem)
+        rescue
+          _ in [ExUnit.AssertionError] -> false
+        end
+      end)
 
-      case result do
-        nil -> list
-        index -> List.delete_at(list, index)
-      end
-    end)
+    case result do
+      nil -> {left_acc ++ [left_elem], right_acc}
+      index -> {left_acc, List.delete_at(right_acc, index)}
+    end
   end
+
+  defp compare(_, acc, _), do: acc
 end
