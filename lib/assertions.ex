@@ -328,8 +328,7 @@ defmodule Assertions do
       true
 
   """
-  @spec assert_maps_equal(map, map, [any]) :: true | no_return
-  @spec assert_maps_equal(map, map, comparison) :: true | no_return
+  @spec assert_maps_equal(map, map, [any] | comparison()) :: true | no_return
   defmacro assert_maps_equal(left, right, keys_or_comparison) do
     assertion =
       assertion(
