@@ -33,7 +33,7 @@ defmodule AssertionsTest do
     test "works when composed with other assertions" do
       list1 = [DateTime.utc_now(), DateTime.utc_now()]
       list2 = [DateTime.utc_now(), DateTime.utc_now()]
-      assert_lists_equal(list1, list2, &assert_structs_equal(&1, &2, [:year, :month]))
+      assert_lists_equal list1, list2, &assert_structs_equal(&1, &2, [:year, :month])
     end
   end
 
@@ -41,13 +41,13 @@ defmodule AssertionsTest do
     test "works with comparisons that raise an error instead of returning false" do
       list1 = [%{foo: 1}, %{foo: 2}, %{foo: 3}]
       list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
-      assert_lists_equal(list1, list2, &assert_maps_equal(&1, &2, [:foo]))
+      assert_lists_equal list1, list2, &assert_maps_equal(&1, &2, [:foo])
     end
 
     test "keeps the right ordering in the comparison function" do
       list1 = [:a, :c, :b, :d]
       list2 = ["a", "b", "c", "d"]
-      assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+      assert_lists_equal list1, list2, &(Atom.to_string(&1) == &2)
     end
 
     test "fails correctly with non-equal sized lists" do
@@ -55,7 +55,7 @@ defmodule AssertionsTest do
       list2 = ["a", "b", "c", "d"]
 
       try do
-        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        assert_lists_equal list1, list2, &(Atom.to_string(&1) == &2)
         flunk("Should have failed")
       rescue
         e in [ExUnit.AssertionError] ->
@@ -67,7 +67,7 @@ defmodule AssertionsTest do
       list2 = ["a", "b", "c", "d", "d"]
 
       try do
-        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        assert_lists_equal list1, list2, &(Atom.to_string(&1) == &2)
         flunk("Should have failed")
       rescue
         e in [ExUnit.AssertionError] ->
@@ -79,7 +79,7 @@ defmodule AssertionsTest do
       list2 = ["a", "a", "b", "c", "c"]
 
       try do
-        assert_lists_equal(list1, list2, &(Atom.to_string(&1) == &2))
+        assert_lists_equal list1, list2, &(Atom.to_string(&1) == &2)
         flunk("Should have failed")
       rescue
         e in [ExUnit.AssertionError] ->
@@ -91,11 +91,7 @@ defmodule AssertionsTest do
 
   describe "assert_maps_equal/3" do
     test "works with custom functions" do
-      assert_maps_equal(
-        %{a: :b},
-        %{b: "b"},
-        &(Map.get(&1, :a) == String.to_atom(Map.get(&2, :b)))
-      )
+      assert_maps_equal %{a: :b}, %{b: "b"}, &(Map.get(&1, :a) == String.to_atom(Map.get(&2, :b)))
     end
   end
 
@@ -105,7 +101,7 @@ defmodule AssertionsTest do
         use Assertions.Case, async: true
 
         test "fails" do
-          assert_map_in_list(%{a: :b, c: :d}, [%{a: :b, c: :e}], [:a, :c])
+          assert_map_in_list %{a: :b, c: :d}, [%{a: :b, c: :e}], [:a, :c]
         end
       end
 
@@ -123,32 +119,32 @@ defmodule AssertionsTest do
       first = %Nested{key: :value, list: [1, 2, 3], map: %{a: :a}}
       second = %Nested{key: :value, list: [1, 3, 2], map: %{"a" => :a}}
 
-      assert_structs_equal(first, second, fn left, right ->
+      assert_structs_equal first, second, fn left, right ->
         assert left.key == right.key
-        assert_lists_equal(left.list, right.list)
-        assert_maps_equal(left.map, right.map, &(&1.a == &2["a"]))
-      end)
+        assert_lists_equal left.list, right.list
+        assert_maps_equal left.map, right.map, &(&1.a == &2["a"])
+      end
     end
   end
 
   describe "assert_raise/1" do
     test "doesn't override ExUnit's assert_raise/2 or assert_raise/3" do
-      assert_raise(ExUnit.AssertionError, fn ->
-        assert_raise(fn ->
+      assert_raise ExUnit.AssertionError, fn ->
+        assert_raise fn ->
           first = 1
           second = 2
           first / second
-        end)
-      end)
+        end
+      end
 
       regex = ~r/Expected exception but nothing was raised/
 
       assert_raise ExUnit.AssertionError, regex, fn ->
-        assert_raise(fn ->
+        assert_raise fn ->
           first = 1
           second = 2
           first / second
-        end)
+        end
       end
     end
   end

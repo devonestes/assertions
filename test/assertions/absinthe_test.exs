@@ -83,7 +83,7 @@ defmodule Assertions.AbsintheTest do
 
   describe "fields_for/1" do
     test "returns all fields for a single type" do
-      assert_lists_equal(fields_for(:cat), [:__typename, :favorite_toy, :name, :weight])
+      assert_lists_equal fields_for(:cat), [:__typename, :favorite_toy, :name, :weight]
     end
 
     test "returns a tuple for object child types, default nesting of 3" do
@@ -116,7 +116,7 @@ defmodule Assertions.AbsintheTest do
         :__typename
       ]
 
-      assert_lists_equal(fields_for(:dog), expected)
+      assert_lists_equal fields_for(:dog), expected
     end
   end
 
@@ -146,7 +146,7 @@ defmodule Assertions.AbsintheTest do
         :__typename
       ]
 
-      assert_lists_equal(fields_for(:person, 2), expected)
+      assert_lists_equal fields_for(:person, 2), expected
 
       expected = [
         {:owner,
@@ -203,7 +203,7 @@ defmodule Assertions.AbsintheTest do
         :__typename
       ]
 
-      assert_lists_equal(fields_for(:dog, 5), expected)
+      assert_lists_equal fields_for(:dog, 5), expected
     end
   end
 
@@ -325,7 +325,7 @@ defmodule Assertions.AbsintheTest do
       }
       """
 
-      assert_response_equals(query, expected_response)
+      assert_response_equals query, expected_response
     end
 
     test "works with mutations when we need to pass variables and context" do
@@ -363,7 +363,7 @@ defmodule Assertions.AbsintheTest do
         }
       }
 
-      assert_response_equals(mutation, expected_response, variables: variables, context: %{})
+      assert_response_equals mutation, expected_response, variables: variables, context: %{}
     end
 
     test "fails when it should" do
@@ -403,7 +403,7 @@ defmodule Assertions.AbsintheTest do
       }
       """
 
-      assert_response_equals(query, expected_response)
+      assert_response_equals query, expected_response
     rescue
       error in [ExUnit.AssertionError] ->
         assert error.left == %{
@@ -482,7 +482,7 @@ defmodule Assertions.AbsintheTest do
       }
       """
 
-      assert_response_matches(query, do: %{"dog" => dog})
+      assert_response_matches query, do: %{"dog" => dog}
 
       assert %{
                "name" => _,
@@ -522,7 +522,7 @@ defmodule Assertions.AbsintheTest do
 
       dog_type = "Dog"
 
-      assert_response_matches(query) do
+      assert_response_matches query do
         %{
           "dog" => %{
             "name" => ^dog_type,
