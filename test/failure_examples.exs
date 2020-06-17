@@ -18,37 +18,37 @@ defmodule Assertions.FailureExamples do
 
   describe "assert!/1" do
     test "fails" do
-      assert! "A string"
+      assert!("A string")
     end
 
     test "fails when using nil" do
-      assert! nil > 0
+      assert!(nil > 0)
     end
   end
 
   describe "refute!/1" do
     test "fails" do
-      refute! nil
+      refute!(nil)
     end
 
     test "fails when using nil" do
-      refute! nil < 0
+      refute!(nil < 0)
     end
   end
 
   describe "assert_lists_equal/2" do
     test "fails" do
-      assert_lists_equal [1, 2, 3], [1, 4, 2]
+      assert_lists_equal([1, 2, 3], [1, 4, 2])
     end
   end
 
   describe "assert_lists_equal/3" do
     test "fails when the third argument is a custom message" do
-      assert_lists_equal [1, 2, 3], [1, 4, 2], "Didn't match!"
+      assert_lists_equal([1, 2, 3], [1, 4, 2], "Didn't match!")
     end
 
     test "fails when the third argument is a custom function" do
-      assert_lists_equal ["cat"], ["lion"], &(String.length(&1) == String.length(&2))
+      assert_lists_equal(["cat"], ["lion"], &(String.length(&1) == String.length(&2)))
     end
 
     test "fails nicely with a list of maps" do
@@ -64,7 +64,7 @@ defmodule Assertions.FailureExamples do
         %{"six" => :six, "seven" => 7}
       ]
 
-      assert_lists_equal left, right, &assert_maps_equal(&1, &2, Map.keys(&2))
+      assert_lists_equal(left, right, &assert_maps_equal(&1, &2, Map.keys(&2)))
     end
   end
 
@@ -73,51 +73,52 @@ defmodule Assertions.FailureExamples do
       map = %{first: :first, second: :second, not: :used, keys: :are, always: :pruned}
       list = [%{first: :first, second: :third, third: :fourth, a: :b, d: :e}]
       keys = [:first, :second]
-      assert_map_in_list map, list, keys
+      assert_map_in_list(map, list, keys)
     end
 
     test "fails with string keys" do
       map = %{"first" => :first, "second" => :second}
       list = [%{"first" => :first, "second" => :third}]
       keys = ["first", "second"]
-      assert_map_in_list map, list, keys
+      assert_map_in_list(map, list, keys)
     end
 
     test "fails with list keys" do
       map = %{["first"] => :first, ["second"] => :second}
       list = [%{["first"] => :first, ["second"] => :third}]
       keys = [["first"], ["second"]]
-      assert_map_in_list map, list, keys
+      assert_map_in_list(map, list, keys)
     end
   end
 
   describe "assert_maps_equal/3" do
     test "fails" do
-      assert_maps_equal %{first: :first, second: :second}, %{first: :second, third: :third}, [
-        :first
-      ]
+      assert_maps_equal(
+        %{first: :first, second: :second},
+        %{first: :second, third: :third},
+        [:first]
+      )
     end
   end
 
   describe "assert_struct_in_list/3" do
     test "fails with struct/keys/list" do
-      assert_struct_in_list DateTime.utc_now(), [:year, :month], [Date.utc_today()]
+      assert_struct_in_list(DateTime.utc_now(), [:year, :month], [Date.utc_today()])
     end
 
     test "fails with map/module/list" do
       map = Map.take(DateTime.utc_now(), [:year, :month])
-      assert_struct_in_list map, DateTime, [Date.utc_today()]
+      assert_struct_in_list(map, DateTime, [Date.utc_today()])
     end
   end
 
   describe "assert_structs_equal/3" do
     test "fails" do
-      assert_structs_equal DateTime.utc_now(), DateTime.utc_now(), [
-        :year,
-        :month,
-        :millisecond,
-        :microsecond
-      ]
+      assert_structs_equal(
+        DateTime.utc_now(),
+        DateTime.utc_now(),
+        [:year, :month, :millisecond, :microsecond]
+      )
     end
   end
 
@@ -129,7 +130,7 @@ defmodule Assertions.FailureExamples do
         [key: :list, other: :keyword]
       ]
 
-      assert_all_have_value list, :key, :value
+      assert_all_have_value(list, :key, :value)
     end
   end
 
@@ -199,35 +200,35 @@ defmodule Assertions.FailureExamples do
 
   describe "assert_receive_only/2" do
     test "fails if it receives no messages" do
-      assert_receive_only :hello, 1
+      assert_receive_only(:hello, 1)
     end
 
     test "fails if it receives the wrong message first" do
       send(self(), :hello_again)
       send(self(), [:hello])
-      assert_receive_only [_]
+      assert_receive_only([_])
     end
 
     test "fails if the messages are sent after the assert call" do
       Process.send_after(self(), :hello, 50)
       Process.send_after(self(), :hello_again, 20)
-      assert_receive_only :hello, 100
+      assert_receive_only(:hello, 100)
     end
 
     test "fails if it receives an unexpected message after the expected pattern" do
       send(self(), :hello)
       send(self(), :hello_again)
-      assert_receive_only :hello
+      assert_receive_only(:hello)
     end
   end
 
   describe "assert_raise/1" do
     test "fails if the expression does not raise" do
-      assert_raise fn ->
+      assert_raise(fn ->
         first = 1
         second = 2
         first / second
-      end
+      end)
     end
   end
 end
