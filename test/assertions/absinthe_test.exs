@@ -210,10 +210,10 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/1" do
     test "returns a properly formatted document that can be used as a query" do
       expected = """
-        weight
-        name
-        favoriteToy
-        __typename
+                  weight
+                  name
+                  favoriteToy
+                  __typename
       """
 
       assert document_for(:cat) == expected
@@ -223,44 +223,44 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/2" do
     test "allows the user to set the level of nesting" do
       expected = """
-        owner {
-          pets {
-            name
-            __typename
-            ...on Cat {
-              weight
-              favoriteToy
-              __typename
-            }
-            ...on Dog {
-              owner {
-                name
-                __typename
-              }
-              __typename
-            }
-          }
-          name
-          animals {
-            ...on Cat {
-              weight
-              name
-              favoriteToy
-              __typename
-            }
-            ...on Dog {
-              owner {
-                name
-                __typename
-              }
-              name
-              __typename
-            }
-          }
-          __typename
-        }
-        name
-        __typename
+                  owner {
+                    pets {
+                      name
+                      __typename
+                      ...on Cat {
+                        weight
+                        favoriteToy
+                        __typename
+                      }
+                      ...on Dog {
+                        owner {
+                          name
+                          __typename
+                        }
+                        __typename
+                      }
+                    }
+                    name
+                    animals {
+                      ...on Cat {
+                        weight
+                        name
+                        favoriteToy
+                        __typename
+                      }
+                      ...on Dog {
+                        owner {
+                          name
+                          __typename
+                        }
+                        name
+                        __typename
+                      }
+                    }
+                    __typename
+                  }
+                  name
+                  __typename
       """
 
       assert document_for(:dog, 4) == expected
@@ -268,18 +268,63 @@ defmodule Assertions.AbsintheTest do
 
     test "works with interfaces with a single implementor" do
       expected = """
-        name
-        __typename
-        ...on Dog {
-          owner {
-            name
-            __typename
-          }
-          __typename
-        }
+                  name
+                  __typename
+                  ...on Dog {
+                    owner {
+                      name
+                      __typename
+                    }
+                    __typename
+                  }
       """
 
       assert document_for(:doggo, 2) == expected
+    end
+
+    test "allows the user to give overrides for certain nodes" do
+      expected = """
+                  owner {
+                    pets({filter: {name: "NAME"}}) {
+                      name
+                      __typename
+                      ...on Cat {
+                        weight
+                        favoriteToy
+                        __typename
+                      }
+                      ...on Dog {
+                        owner {
+                          name
+                          __typename
+                        }
+                        __typename
+                      }
+                    }
+                    name
+                    animals {
+                      ...on Cat {
+                        weight
+                        name
+                        favoriteToy
+                        __typename
+                      }
+                      ...on Dog {
+                        owner {
+                          name
+                          __typename
+                        }
+                        name
+                        __typename
+                      }
+                    }
+                    __typename
+                  }
+                  name
+                  __typename
+      """
+
+      assert document_for(:dog, 4, owner: [pets: "pets({filter: {name: \"NAME\"}})"]) == expected
     end
   end
 

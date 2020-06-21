@@ -65,11 +65,12 @@ defmodule Assertions.Absinthe do
     }
     "\""
   """
-  @spec document_for(module(), atom(), non_neg_integer()) :: String.t()
-  def document_for(schema, type, nesting) do
+  @spec document_for(module(), atom(), non_neg_integer(), Keyword.t()) :: String.t()
+  def document_for(schema, type, nesting, overrides) do
     schema
     |> fields_for(type, nesting)
-    |> format_fields(type, 0, schema)
+    |> merge_overrides(overrides)
+    |> format_fields(type, 10, schema)
     |> List.to_string()
   end
 
@@ -166,28 +167,28 @@ defmodule Assertions.Absinthe do
     :scalar
   end
 
-  defp format_fields({interface_fields, implementor_fields}, _, 0, schema) do
+  defp format_fields({interface_fields, implementor_fields}, _, 10, schema) do
     interface_fields =
       interface_fields
-      |> Enum.reduce({[], 2}, &do_format_fields(&1, &2, schema))
+      |> Enum.reduce({[], 12}, &do_format_fields(&1, &2, schema))
       |> elem(0)
 
     implementor_fields =
       implementor_fields
       |> Enum.map(fn {type, fields} ->
         type_info = schema.__absinthe_type__(type)
-        [_ | rest] = format_fields(fields, type, 2, schema)
+        [_ | rest] = format_fields(fields, type, 12, schema)
         fields = ["...on #{type_info.name} {\n" | rest]
-        [padding(2), fields]
+        [padding(12), fields]
       end)
 
     Enum.reverse([implementor_fields | interface_fields])
   end
 
-  defp format_fields(fields, _, 0, schema) do
+  defp format_fields(fields, _, 10, schema) do
     fields =
       fields
-      |> Enum.reduce({[], 2}, &do_format_fields(&1, &2, schema))
+      |> Enum.reduce({[], 12}, &do_format_fields(&1, &2, schema))
       |> elem(0)
 
     Enum.reverse(fields)
@@ -233,4 +234,27 @@ defmodule Assertions.Absinthe do
   defp padding(left_pad), do: Enum.map(1..left_pad, fn _ -> " " end)
 
   defp camelize(type), do: Absinthe.Utils.camelize(to_string(type), lower: true)
+
+  defp merge_overrides({key, values}, fields) when is_atom(key) and is_list(values) do
+    Keyword.update!(fields, key, fn field_value ->
+      Enum.reduce(values, field_value, &merge_overrides/2)
+    end)
+  end
+
+  defp merge_overrides({key, replacement_key}, fields)
+       when is_atom(key) and is_binary(replacement_key) do
+    Enum.map(fields, fn
+      ^key -> replacement_key
+      {^key, value} -> {replacement_key, value}
+      value -> value
+    end)
+  end
+
+  defp merge_overrides(fields, []) do
+    fields
+  end
+
+  defp merge_overrides(fields, overrides) do
+    Enum.reduce(overrides, fields, &merge_overrides/2)
+  end
 end

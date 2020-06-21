@@ -20,8 +20,8 @@ defmodule Assertions.AbsintheCase do
         fields_for(unquote(schema), type, nesting)
       end
 
-      def document_for(type, nesting \\ 3) do
-        document_for(unquote(schema), type, nesting)
+      def document_for(type, nesting \\ 3, overrides \\ []) do
+        document_for(unquote(schema), type, nesting, overrides)
       end
 
       def assert_response_equals(document, expected_response, options) when is_list(options) do
