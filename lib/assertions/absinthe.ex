@@ -111,10 +111,8 @@ defmodule Assertions.Absinthe do
           :ok | no_return()
   defmacro assert_response_matches(schema, document, options, do: expr) do
     quote do
-      assert {:ok, %{data: response}} =
+      assert {:ok, %{data: unquote(expr)}} =
                Absinthe.run(unquote(document), unquote(schema), unquote(options))
-
-      assert unquote(expr) = response
     end
   end
 
