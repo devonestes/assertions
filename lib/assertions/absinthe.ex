@@ -43,7 +43,7 @@ defmodule Assertions.Absinthe do
       |> get_fields(schema, nesting)
     end
 
-    @doc ~S"""
+    @doc """
     Returns a document containing the fields in a type and any sub-types down to a limited depth of
     nesting (default `3`).
 
@@ -51,20 +51,20 @@ defmodule Assertions.Absinthe do
     will always return all fields in the given type, ensuring that there aren't any accidental
     fields with resolver functions that aren't tested in at least some fashion.
 
-      ## Example
+    ## Example
 
-      #=> document_for(:user, 2)
-      "\""
-      name
-      age
-      posts {
-        title
-        subtitle
-      }
-      comments {
-        body
-      }
-      "\""
+        iex> document_for(:user, 2)
+        \"""
+        name
+        age
+        posts {
+          title
+          subtitle
+        }
+        comments {
+          body
+        }
+        \"""
     """
     @spec document_for(module(), atom(), non_neg_integer(), Keyword.t()) :: String.t()
     def document_for(schema, type, nesting, overrides) do
@@ -81,11 +81,11 @@ defmodule Assertions.Absinthe do
     This is helpful when you want to exhaustively test something by asserting equality on every
     field in the response.
 
-      ## Example
+    ## Example
 
-      ##> query = "{ user { #\{document_for(:user, 2} } }"
-      ##> expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
-      ##> assert_response_equals(query, expected)
+        iex> query = "{ user { #{document_for(:user, 2)} } }"
+        iex> expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
+        iex> assert_response_equals(query, expected)
     """
     @spec assert_response_equals(module(), String.t(), map(), Keyword.t()) :: :ok | no_return()
     def assert_response_equals(schema, document, expected_response, options) do
@@ -93,20 +93,20 @@ defmodule Assertions.Absinthe do
       Assertions.assert_maps_equal(response, expected_response, Map.keys(response))
     end
 
-    @doc """
+    @doc ~S"""
     Assert that the response for sending `document` matches `expr`.
 
     This is helpful when you want to test some but not all fields in the returned response, or
     would like to break up your assertions by binding variables in the body of the match and then
     making separate assertions further down in your test.
 
-      ## Example
+    ## Example
 
-      ##> query = "{ user { #\{document_for(:user, 2} } }"
-      ##> assert_response_matches(query) do
-      ##>   %{"user" => %{"name" => "B" <> _, "posts" => posts}}
-      ##> end
-      ##> assert length(posts) == 1
+        iex> query = "{ user { #{document_for(:user, 2)} } }"
+        iex> assert_response_matches(query) do
+           %{"user" => %{"name" => "B" <> _, "posts" => posts}}
+        end
+        iex> assert length(posts) == 1
     """
     @spec assert_response_matches(module(), String.t(), Keyword.t(), Macro.expr()) ::
             :ok | no_return()
