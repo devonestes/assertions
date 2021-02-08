@@ -29,7 +29,7 @@ defmodule Assertions.MixProject do
 
   defp package do
     [
-      files: ~w(lib mix.exs README.md LICENSE),
+      files: ~w(lib mix.exs README.md LICENSE .formatter.exs),
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/devonestes/assertions"}
     ]
