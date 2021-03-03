@@ -1,12 +1,21 @@
-# Assertions [![Hex Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions) [![Build Status](https://travis-ci.org/devonestes/assertions.svg?branch=master)](https://travis-ci.org/devonestes/assertions)
+# Assertions
+
+[![Build Status](https://travis-ci.org/devonestes/assertions.svg?branch=master)](https://travis-ci.org/devonestes/assertions)
+[![Module Version](https://img.shields.io/hexpm/v/assertions.svg)](https://hex.pm/packages/assertions)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/assertions/)
+[![Total Download](https://img.shields.io/hexpm/dt/assertions.svg)](https://hex.pm/packages/assertions)
+[![License](https://img.shields.io/hexpm/l/assertions.svg)](https://github.com/devonestes/assertions/blob/master/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/devonestes/assertions.svg)](https://github.com/devonestes/assertions/commits/master)
 
 ## Installation
 
-Add `assertions` to your list of dependencies in `mix.exs`:
+Add `:assertions` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:assertions, "~> 0.10", only: :test}]
+  [
+    {:assertions, "~> 0.10", only: :test}
+  ]
 end
 ```
 
@@ -92,7 +101,7 @@ defmodule UsersTest do
       alice = Factory.insert(:user, name: "Alice")
       bob = Factory.insert(:user, name: "Bob")
 
-      updated_names = 
+      updated_names =
         [{alice, %{name: "Alice A."}, {bob, %{name: "Bob B."}}}]
         |> Users.update_all()
         |> Enum.map(& &1.name)
@@ -190,22 +199,22 @@ end
 
 The output you get from that failure looks like this:
 
-```
-     Expected truthy, got false
-     code: assert Enum.any?(list, fn map_in_list -> Map.get(map_in_list, :key) == map.key() end)
-     arguments:
+```elixir
+Expected truthy, got false
+code: assert Enum.any?(list, fn map_in_list -> Map.get(map_in_list, :key) == map.key() end)
+arguments:
 
-         # 1
-         [
-           %{big: :map, of: :keys, with: :lots},
-           %{another: :big, key: :values, store: :with}
-         ]
+   # 1
+   [
+     %{big: :map, of: :keys, with: :lots},
+     %{another: :big, key: :values, store: :with}
+   ]
 
-         # 2
-         #Function<21.25555998/1 in Assertions.FailureExamples."test example"/1>
+   # 2
+   #Function<21.25555998/1 in Assertions.FailureExamples."test example"/1>
 
-     stacktrace:
-       test/failure_examples.exs:207: (test)
+stacktrace:
+ test/failure_examples.exs:207: (test)
 ```
 
 That's not really helpful. What we wanted to know was essentially "is a map with
@@ -227,24 +236,24 @@ end
 
 And then the output looks like this:
 
-```
-     Map matching the values for keys `:key` not found
-     code:  assert_map_in_list(map, list, [:key])
-     arguments:
+```elixir
+Map matching the values for keys `:key` not found
+code:  assert_map_in_list(map, list, [:key])
+arguments:
 
-         # 1
-         %{key: :value, really: :helpful, stores: :are}
+   # 1
+   %{key: :value, really: :helpful, stores: :are}
 
-         # 2
-         [
-           %{big: :map, of: :keys, with: :lots},
-           %{another: :big, key: :values, store: :with}
-         ]
+   # 2
+   [
+     %{big: :map, of: :keys, with: :lots},
+     %{another: :big, key: :values, store: :with}
+   ]
 
-     left:  %{key: :value}
-     right: [%{}, %{key: :values}]
-     stacktrace:
-       test/failure_examples.exs:206: (test)
+left:  %{key: :value}
+right: [%{}, %{key: :values}]
+stacktrace:
+ test/failure_examples.exs:206: (test)
 ```
 
 The error message there in the `left` and `right` keys shrinks down the output
