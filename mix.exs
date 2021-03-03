@@ -1,6 +1,8 @@
 defmodule Assertions.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/devonestes/assertions"
+
   def project do
     [
       app: :assertions,
@@ -10,11 +12,7 @@ defmodule Assertions.MixProject do
       description: description(),
       package: package(),
       name: "Assertions",
-      source_url: "https://github.com/devonestes/assertions",
-      docs: [
-        main: "Assertions",
-        extras: ["README.md"]
-      ]
+      docs: docs()
     ]
   end
 
@@ -29,17 +27,28 @@ defmodule Assertions.MixProject do
 
   defp package do
     [
-      files: ~w(lib mix.exs README.md LICENSE .formatter.exs),
+      files: ~w(lib mix.exs CHANGELOG.md README.md LICENSE .formatter.exs),
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/devonestes/assertions"}
+      links: %{
+        "Changelog" => "https://hexdocs.pm/assertions/changelog.html",
+        "GitHub" => @source_url
+      }
     ]
   end
 
   defp deps() do
     [
-      {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false},
+      {:ex_doc, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:ecto, "~> 3.3", only: [:dev, :test], runtime: false},
       {:absinthe, "~> 1.5.0-rc.5", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp docs do
+    [
+      extras: ["CHANGELOG.md", "README.md"],
+      main: "readme",
+      source_url: @source_url
     ]
   end
 end
