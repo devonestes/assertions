@@ -4,6 +4,9 @@
 ### Features
 * Better error messages for `assert_response_matches`, now showing GraphQL errors if they exist.
 
+### Bugs
+* Fix compilation error with Elixir 1.12
+
 ## 0.18.0
 ### Features
 * Exports `locals_without_parens` in the `.formatter.exs` so people can use these assertions
