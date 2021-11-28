@@ -19,7 +19,7 @@ defmodule Assertions.Absinthe do
 
   and then all functions in this module will not need the schema passed explicitly into it.
   """
-  if match?({:module, _}, Code.ensure_compiled(Absinthe)) do
+  if Code.ensure_loaded?(Absinthe) do
     require Assertions
 
     require ExUnit.Assertions
@@ -104,8 +104,8 @@ defmodule Assertions.Absinthe do
 
         iex> query = "{ user { #{document_for(:user, 2)} } }"
         iex> assert_response_matches(query) do
-           %{"user" => %{"name" => "B" <> _, "posts" => posts}}
-        end
+        ...>    %{"user" => %{"name" => "B" <> _, "posts" => posts}}
+        ...> end
         iex> assert length(posts) == 1
     """
     @spec assert_response_matches(module(), String.t(), Keyword.t(), Macro.expr()) ::
