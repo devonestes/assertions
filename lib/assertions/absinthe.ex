@@ -82,10 +82,39 @@ defmodule Assertions.Absinthe do
     field in the response.
 
     ## Example
-
-        iex> query = "{ user { #{document_for(:user, 2)} } }"
-        iex> expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
-        iex> assert_response_equals(query, expected)
+        iex> ExUnit.start()
+        iex>
+        iex> defmodule MyApp.Schema do
+        ...>use Absinthe.Schema
+        ...>object :user do
+        ...>field :name, :string do
+        ...>resolve(fn _, _, _ -> {:ok, "Bob"} end)
+        ...>end
+        ...>
+        ...>field :posts, non_null(list_of(:post)) do
+        ...>resolve(fn _, _, _ -> {:ok, [%{}]} end)
+        ...>end
+        ...>end
+        ...>object :post do
+        ...>field :title, :string do
+        ...>resolve(fn _, _, _ -> {:ok, "A post"} end)
+        ...>end
+        ...>end
+        ...>query do
+        ...>field :user, :user do
+        ...>arg(:name, :string)
+        ...>resolve(fn _, _, _ -> {:ok, %{}} end)
+        ...>end
+        ...>end
+        ...>end
+        iex>
+        ...>defmodule MyApp.DataCase do
+        ...>use Assertions.AbsintheCase, async: true, schema: MyApp.Schema
+        ...>end
+        iex>
+        iex> query = "{ user { #{MyApp.DataCase.document_for(:user, 2)} } }"
+        iex> expected = %{"user" => %{"__typename" => "User", "name" => "Bob", "posts" => [%{"__typename" => "Post", "title" => "A post"}]}}
+        iex> MyApp.DataCase.assert_response_equals(query, expected)
     """
     @spec assert_response_equals(module(), String.t(), map(), Keyword.t()) :: :ok | no_return()
     def assert_response_equals(schema, document, expected_response, options) do
@@ -101,11 +130,10 @@ defmodule Assertions.Absinthe do
     making separate assertions further down in your test.
 
     ## Example
-
         iex> query = "{ user { #{document_for(:user, 2)} } }"
         iex> assert_response_matches(query) do
-           %{"user" => %{"name" => "B" <> _, "posts" => posts}}
-        end
+        ...>%{"user" => %{"name" => "B" <> _, "posts" => posts}}
+        ...>end
         iex> assert length(posts) == 1
     """
     @spec assert_response_matches(module(), String.t(), Keyword.t(), Macro.expr()) ::
