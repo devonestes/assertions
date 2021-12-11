@@ -52,18 +52,39 @@ defmodule Assertions.Absinthe do
     fields with resolver functions that aren't tested in at least some fashion.
 
     ## Example
-
-        iex> document_for(:user, 2)
+        iex> ExUnit.start()
+        iex>
+        iex> defmodule MyApp.Schema do
+        ...>use Absinthe.Schema
+        ...>object :user do
+        ...>field :name, :string do
+        ...>resolve(fn _, _, _ -> {:ok, "Bob"} end)
+        ...>end
+        ...>
+        ...>field :posts, non_null(list_of(:post)) do
+        ...>resolve(fn _, _, _ -> {:ok, [%{}]} end)
+        ...>end
+        ...>end
+        ...>object :post do
+        ...>field :title, :string do
+        ...>resolve(fn _, _, _ -> {:ok, "A post"} end)
+        ...>end
+        ...>end
+        ...>query do
+        ...>field :user, :user do
+        ...>arg(:name, :string)
+        ...>resolve(fn _, _, _ -> {:ok, %{}} end)
+        ...>end
+        ...>end
+        ...>end
+        iex>
+        ...>defmodule MyApp.DataCase do
+        ...>use Assertions.AbsintheCase, async: true, schema: MyApp.Schema
+        ...>end
+        iex>
+        iex> MyApp.DataCase.document_for(:user, 2)
         \"""
-        name
-        age
-        posts {
-          title
-          subtitle
-        }
-        comments {
-          body
-        }
+                    posts {\n                  title\n                  __typename\n                }\n                name\n                __typename
         \"""
     """
     @spec document_for(module(), atom(), non_neg_integer(), Keyword.t()) :: String.t()
