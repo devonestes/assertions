@@ -55,16 +55,9 @@ defmodule Assertions.Absinthe do
 
         iex> document_for(:user, 2)
         \"""
-        name
-        age
-        posts {
-          title
-          subtitle
-        }
-        comments {
-          body
-        }
+                    posts {\n                  title\n                  __typename\n                }\n                name\n                __typename
         \"""
+
     """
     @spec document_for(module(), atom(), non_neg_integer(), Keyword.t()) :: String.t()
     def document_for(schema, type, nesting, overrides) do
@@ -84,8 +77,9 @@ defmodule Assertions.Absinthe do
     ## Example
 
         iex> query = "{ user { #{document_for(:user, 2)} } }"
-        iex> expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
+        iex> expected = %{"user" => %{"__typename" => "User", "name" => "Bob", "posts" => [%{"__typename" => "Post", "title" => "A post"}]}}
         iex> assert_response_equals(query, expected)
+
     """
     @spec assert_response_equals(module(), String.t(), map(), Keyword.t()) :: :ok | no_return()
     def assert_response_equals(schema, document, expected_response, options) do
@@ -104,9 +98,10 @@ defmodule Assertions.Absinthe do
 
         iex> query = "{ user { #{document_for(:user, 2)} } }"
         iex> assert_response_matches(query) do
-           %{"user" => %{"name" => "B" <> _, "posts" => posts}}
-        end
+        ...>%{"user" => %{"name" => "B" <> _, "posts" => posts}}
+        ...>end
         iex> assert length(posts) == 1
+
     """
     @spec assert_response_matches(module(), String.t(), Keyword.t(), Macro.expr()) ::
             :ok | no_return()
