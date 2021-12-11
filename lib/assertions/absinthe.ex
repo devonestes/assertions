@@ -52,37 +52,7 @@ defmodule Assertions.Absinthe do
     fields with resolver functions that aren't tested in at least some fashion.
 
     ## Example
-        iex> ExUnit.start()
-        iex>
-        iex> defmodule MyApp.Schema do
-        ...>use Absinthe.Schema
-        ...>object :user do
-        ...>field :name, :string do
-        ...>resolve(fn _, _, _ -> {:ok, "Bob"} end)
-        ...>end
-        ...>
-        ...>field :posts, non_null(list_of(:post)) do
-        ...>resolve(fn _, _, _ -> {:ok, [%{}]} end)
-        ...>end
-        ...>end
-        ...>object :post do
-        ...>field :title, :string do
-        ...>resolve(fn _, _, _ -> {:ok, "A post"} end)
-        ...>end
-        ...>end
-        ...>query do
-        ...>field :user, :user do
-        ...>arg(:name, :string)
-        ...>resolve(fn _, _, _ -> {:ok, %{}} end)
-        ...>end
-        ...>end
-        ...>end
-        iex>
-        ...>defmodule MyApp.DataCase do
-        ...>use Assertions.AbsintheCase, async: true, schema: MyApp.Schema
-        ...>end
-        iex>
-        iex> MyApp.DataCase.document_for(:user, 2)
+        iex> document_for(:user, 2)
         \"""
                     posts {\n                  title\n                  __typename\n                }\n                name\n                __typename
         \"""
@@ -103,39 +73,9 @@ defmodule Assertions.Absinthe do
     field in the response.
 
     ## Example
-        iex> ExUnit.start()
-        iex>
-        iex> defmodule MyApp.Schema do
-        ...>use Absinthe.Schema
-        ...>object :user do
-        ...>field :name, :string do
-        ...>resolve(fn _, _, _ -> {:ok, "Bob"} end)
-        ...>end
-        ...>
-        ...>field :posts, non_null(list_of(:post)) do
-        ...>resolve(fn _, _, _ -> {:ok, [%{}]} end)
-        ...>end
-        ...>end
-        ...>object :post do
-        ...>field :title, :string do
-        ...>resolve(fn _, _, _ -> {:ok, "A post"} end)
-        ...>end
-        ...>end
-        ...>query do
-        ...>field :user, :user do
-        ...>arg(:name, :string)
-        ...>resolve(fn _, _, _ -> {:ok, %{}} end)
-        ...>end
-        ...>end
-        ...>end
-        iex>
-        ...>defmodule MyApp.DataCase do
-        ...>use Assertions.AbsintheCase, async: true, schema: MyApp.Schema
-        ...>end
-        iex>
-        iex> query = "{ user { #{MyApp.DataCase.document_for(:user, 2)} } }"
+        iex> query = "{ user { #{document_for(:user, 2)} } }"
         iex> expected = %{"user" => %{"__typename" => "User", "name" => "Bob", "posts" => [%{"__typename" => "Post", "title" => "A post"}]}}
-        iex> MyApp.DataCase.assert_response_equals(query, expected)
+        iex> assert_response_equals(query, expected)
     """
     @spec assert_response_equals(module(), String.t(), map(), Keyword.t()) :: :ok | no_return()
     def assert_response_equals(schema, document, expected_response, options) do

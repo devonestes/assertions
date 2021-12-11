@@ -64,12 +64,35 @@ defmodule Nested.PetsSchema do
       arg(:name, :string)
       resolve(fn _, _, _ -> {:ok, %{}} end)
     end
+
+    # :user is referenced in the code examples in the documentation,
+    # the :user field and object are needed to pass the doctest.
+    field :user, :user do
+      arg(:name, :string)
+      resolve(fn _, _, _ -> {:ok, %{}} end)
+    end
   end
 
   mutation do
     field :add_person, :person do
       arg(:input, :add_person_input)
       resolve(fn _, _, _ -> {:ok, %{}} end)
+    end
+  end
+
+  object :user do
+    field :name, :string do
+      resolve(fn _, _, _ -> {:ok, "Bob"} end)
+    end
+
+    field :posts, non_null(list_of(:post)) do
+      resolve(fn _, _, _ -> {:ok, [%{}]} end)
+    end
+  end
+
+  object :post do
+    field :title, :string do
+      resolve(fn _, _, _ -> {:ok, "A post"} end)
     end
   end
 end
