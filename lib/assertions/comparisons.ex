@@ -18,6 +18,15 @@ defmodule Assertions.Comparisons do
     {left_diff, right_diff, left_diff == [] and right_diff == []}
   end
 
+  @doc false
+  def when_is_list(arg, positive, negative) do
+    if is_list(arg) do
+      positive.(arg)
+    else
+      negative.(arg)
+    end
+  end
+
   defp compare(_, {[left_elem | left_acc], right_acc}, comparison) do
     result =
       Enum.find_index(right_acc, fn right_elem ->

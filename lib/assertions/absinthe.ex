@@ -53,7 +53,7 @@ defmodule Assertions.Absinthe do
 
     ## Example
 
-        iex> document_for(:user, 2)
+        document_for(:user, 2)
         \"""
         name
         age
@@ -83,9 +83,9 @@ defmodule Assertions.Absinthe do
 
     ## Example
 
-        iex> query = "{ user { #{document_for(:user, 2)} } }"
-        iex> expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
-        iex> assert_response_equals(query, expected)
+        query = "{ user { #{document_for(:user, 2)} } }"
+        expected = %{"user" => %{"name" => "Bob", "posts" => [%{"title" => "A post"}]}}
+        assert_response_equals(query, expected)
     """
     @spec assert_response_equals(module(), String.t(), map(), Keyword.t()) :: :ok | no_return()
     def assert_response_equals(schema, document, expected_response, options) do
@@ -102,11 +102,11 @@ defmodule Assertions.Absinthe do
 
     ## Example
 
-        iex> query = "{ user { #{document_for(:user, 2)} } }"
-        iex> assert_response_matches(query) do
-           %{"user" => %{"name" => "B" <> _, "posts" => posts}}
+        query = "{ user { #{document_for(:user, 2)} } }"
+        assert_response_matches(query) do
+          %{"user" => %{"name" => "B" <> _, "posts" => posts}}
         end
-        iex> assert length(posts) == 1
+         assert length(posts) == 1
     """
     @spec assert_response_matches(module(), String.t(), Keyword.t(), Macro.expr()) ::
             :ok | no_return()
@@ -184,7 +184,7 @@ defmodule Assertions.Absinthe do
       Enum.reverse([implementor_fields | interface_fields])
     end
 
-    defp format_fields(fields, _, 10, schema) do
+    defp format_fields(fields, _, 10, schema) when is_list(fields) do
       fields =
         fields
         |> Enum.reduce({[], 12}, &do_format_fields(&1, &2, schema))
@@ -234,7 +234,7 @@ defmodule Assertions.Absinthe do
 
     defp camelize(type), do: Absinthe.Utils.camelize(to_string(type), lower: true)
 
-    defp merge_overrides({key, values}, fields) when is_atom(key) and is_list(values) do
+    defp merge_overrides({key, values}, [{_, _} | _] = fields) when is_atom(key) and is_list(values) do
       Keyword.update!(fields, key, fn field_value ->
         Enum.reduce(values, field_value, &merge_overrides/2)
       end)

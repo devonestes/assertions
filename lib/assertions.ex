@@ -6,6 +6,7 @@ defmodule Assertions do
   alias Assertions.Comparisons
 
   @type comparison :: (any, any -> boolean | no_return)
+  @type comparison_or_list :: comparison | [any]
 
   @doc """
   Asserts that the return value of the given expression is `true`.
@@ -261,8 +262,7 @@ defmodule Assertions do
       true
 
   """
-  @spec assert_map_in_list(map, [map], [any]) :: true | no_return
-  @spec assert_map_in_list(map, [map], comparison) :: true | no_return
+  @spec assert_map_in_list(map, [map], comparison_or_list) :: true | no_return
   defmacro assert_map_in_list(map, list, keys_or_comparison) do
     assertion =
       assertion(
@@ -274,22 +274,24 @@ defmodule Assertions do
     quote do
       keys_or_comparison = unquote(keys_or_comparison)
 
-      {in_list?, map, list, message} =
-        if is_list(keys_or_comparison) do
-          keys = keys_or_comparison
-          map = Map.take(unquote(map), keys)
-          list = Enum.map(unquote(list), &Map.take(&1, keys))
-          keys = unquote(stringify_list(keys_or_comparison))
-          message = "Map matching the values for keys `#{keys}` not found"
-          {Enum.member?(list, map), map, list, message}
-        else
-          comparison = keys_or_comparison
-          map = unquote(map)
-          list = unquote(list)
-          message = "Map not found in list using given comparison"
+      positive = fn keys ->
+        map = Map.take(unquote(map), keys)
+        list = Enum.map(unquote(list), &Map.take(&1, keys))
+        keys = unquote(stringify_list(keys_or_comparison))
+        message = "Map matching the values for keys `#{keys}` not found"
+        {Enum.member?(list, map), map, list, message}
+      end
 
-          {Enum.any?(list, &comparison.(map, &1)), map, list, message}
-        end
+      negative = fn comparison ->
+        map = unquote(map)
+        list = unquote(list)
+        message = "Map not found in list using given comparison"
+
+        {Enum.any?(list, &comparison.(map, &1)), map, list, message}
+      end
+
+      {in_list?, map, list, message} =
+        Comparisons.when_is_list(keys_or_comparison, positive, negative)
 
       if in_list? do
         true
@@ -328,8 +330,7 @@ defmodule Assertions do
       true
 
   """
-  @spec assert_maps_equal(map, map, [any]) :: true | no_return
-  @spec assert_maps_equal(map, map, comparison) :: true | no_return
+  @spec assert_maps_equal(map, map, comparison_or_list) :: true | no_return
   defmacro assert_maps_equal(left, right, keys_or_comparison) do
     assertion =
       assertion(
@@ -343,18 +344,20 @@ defmodule Assertions do
       left = unquote(left)
       right = unquote(right)
 
+      positive = fn keys ->
+        left = Map.take(left, keys)
+        right = Map.take(right, keys)
+        {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
+        message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
+        {left_diff, right_diff, equal?, message}
+      end
+
+      negative = fn comparison ->
+        {left, right, comparison.(left, right), "Maps not equal using given comparison"}
+      end
+
       {left_diff, right_diff, equal?, message} =
-        if is_list(keys_or_comparison) do
-          keys = keys_or_comparison
-          left = Map.take(left, keys)
-          right = Map.take(right, keys)
-          {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
-          message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
-          {left_diff, right_diff, equal?, message}
-        else
-          comparison = keys_or_comparison
-          {left, right, comparison.(left, right), "Maps not equal using given comprison"}
-        end
+        Comparisons.when_is_list(keys_or_comparison, positive, negative)
 
       if equal? do
         true
@@ -392,8 +395,7 @@ defmodule Assertions do
       true
 
   """
-  @spec assert_struct_in_list(struct, [struct], [atom]) :: true | no_return
-  @spec assert_struct_in_list(struct, [struct], (struct, struct -> boolean)) :: true | no_return
+  @spec assert_struct_in_list(struct, [struct], comparison_or_list) :: true | no_return
   defmacro assert_struct_in_list(struct, list, keys_or_comparison) do
     assertion =
       assertion(
@@ -407,20 +409,22 @@ defmodule Assertions do
       list = unquote(list)
       keys_or_comparison = unquote(keys_or_comparison)
 
+      positive = fn starting ->
+        keys = [:__struct__ | keys_or_comparison]
+        struct = Map.take(struct, keys)
+        list = Enum.map(list, &Map.take(&1, keys))
+
+        {struct in list,
+          "Struct matching the values for keys #{unquote(stringify_list(keys_or_comparison))} not found"}
+      end
+
+      negative = fn comparison ->
+        {Enum.any?(list, &comparison.(struct, &1)),
+          "Struct not found in list using the given comparison"}
+      end
+
       {in_list?, message} =
-        if is_list(keys_or_comparison) do
-          keys = [:__struct__ | keys_or_comparison]
-          struct = Map.take(struct, keys)
-          list = Enum.map(list, &Map.take(&1, keys))
-
-          {struct in list,
-           "Struct matching the values for keys #{unquote(stringify_list(keys_or_comparison))} not found"}
-        else
-          comparison = keys_or_comparison
-
-          {Enum.any?(list, &comparison.(struct, &1)),
-           "Struct not found in list using the given comparison"}
-        end
+        Comparisons.when_is_list(keys_or_comparison, positive, negative)
 
       if in_list? do
         true
@@ -460,8 +464,7 @@ defmodule Assertions do
       true
 
   """
-  @spec assert_structs_equal(struct, struct, [atom]) :: true | no_return
-  @spec assert_structs_equal(struct, struct, (any, any -> boolean)) :: true | no_return
+  @spec assert_structs_equal(struct, struct, comparison_or_list) :: true | no_return
   defmacro assert_structs_equal(left, right, keys_or_comparison) do
     assertion =
       assertion(
@@ -475,25 +478,28 @@ defmodule Assertions do
       right = unquote(right)
       keys_or_comparison = unquote(keys_or_comparison)
 
+      positive = fn starting ->
+        keys = [:__struct__ | starting]
+        left = Map.take(left, keys)
+        right = Map.take(right, keys)
+        message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
+        message = "Values for #{} not equal!"
+        {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
+        {left_diff, right_diff, equal?, message}
+      end
+
+      negative = fn comparison ->
+        {left_diff, right_diff, equal?} =
+          case comparison.(left, right) do
+            {_, _, equal?} = result when is_boolean(equal?) -> result
+            true_or_false when is_boolean(true_or_false) -> {left, right, true_or_false}
+          end
+
+        {left_diff, right_diff, equal?, "Comparison failed!"}
+      end
+
       {left_diff, right_diff, equal?, message} =
-        if is_list(keys_or_comparison) do
-          keys = [:__struct__ | keys_or_comparison]
-          left = Map.take(left, keys)
-          right = Map.take(right, keys)
-          message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
-          {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
-          {left_diff, right_diff, equal?, message}
-        else
-          comparison = keys_or_comparison
-
-          {left_diff, right_diff, equal?} =
-            case comparison.(left, right) do
-              {_, _, equal?} = result when is_boolean(equal?) -> result
-              true_or_false when is_boolean(true_or_false) -> {left, right, true_or_false}
-            end
-
-          {left_diff, right_diff, equal?, "Comparison failed!"}
-        end
+        Comparisons.when_is_list(keys_or_comparison, positive, negative)
 
       if equal? do
         true

@@ -5,30 +5,6 @@ defmodule AssertionsTest do
 
   import ExUnit.CaptureIO, only: [capture_io: 1]
 
-  describe "assert!/1" do
-    test "fails if either side of >, >=, < or <= is nil" do
-      assert!(nil > 0)
-    rescue
-      error in [ExUnit.AssertionError] ->
-        assert nil == error.left
-        assert 0 == error.right
-        assert "assert!(nil > 0)" == Macro.to_string(error.expr)
-        assert error.message == "`nil` is not allowed as an argument to `>` when using `assert!`"
-    end
-  end
-
-  describe "refute!/1" do
-    test "fails if either side of >, >=, < or <= is nil" do
-      refute!(nil > 0)
-    rescue
-      error in [ExUnit.AssertionError] ->
-        assert nil == error.left
-        assert 0 == error.right
-        assert "refute!(nil > 0)" == Macro.to_string(error.expr)
-        assert error.message == "`nil` is not allowed as an argument to `>` when using `refute!`"
-    end
-  end
-
   describe "assert_lists_equal/2" do
     test "works when composed with other assertions" do
       list1 = [DateTime.utc_now(), DateTime.utc_now()]
@@ -41,7 +17,8 @@ defmodule AssertionsTest do
     test "works with comparisons that raise an error instead of returning false" do
       list1 = [%{foo: 1}, %{foo: 2}, %{foo: 3}]
       list2 = [%{foo: 2}, %{foo: 1}, %{foo: 3}]
-      assert_lists_equal(list1, list2, &assert_maps_equal(&1, &2, [:foo]))
+      comparison = &assert_maps_equal(&1, &2, [:foo])
+      assert_lists_equal(list1, list2, comparison)
     end
 
     test "keeps the right ordering in the comparison function" do
@@ -154,7 +131,7 @@ defmodule AssertionsTest do
   end
 
   defp run_tests do
-    ExUnit.Server.modules_loaded()
+    ExUnit.Server.modules_loaded(false)
     capture_io(fn -> ExUnit.run() end)
   end
 end

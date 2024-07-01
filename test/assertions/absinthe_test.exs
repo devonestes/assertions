@@ -88,32 +88,18 @@ defmodule Assertions.AbsintheTest do
 
     test "returns a tuple for object child types, default nesting of 3" do
       expected = [
+        :__typename,
         {:owner,
          [
-           {:pets,
-            {[:name, :__typename],
-             [cat: [:weight, :favorite_toy, :__typename], dog: [:__typename]]}},
-           :name,
+           :__typename,
            {:animals,
-            {
-              [],
-              [
-                cat: [
-                  :weight,
-                  :name,
-                  :favorite_toy,
-                  :__typename
-                ],
-                dog: [
-                  :name,
-                  :__typename
-                ]
-              ]
-            }},
-           :__typename
+            {[], [cat: [:__typename, :weight, :favorite_toy, :name], dog: [:__typename, :name]]}},
+           {:pets,
+            {[:__typename, :name],
+             [cat: [:__typename, :weight, :favorite_toy], dog: [:__typename]]}},
+           :name
          ]},
-        :name,
-        :__typename
+        :name
       ]
 
       assert_lists_equal(fields_for(:dog), expected)
@@ -123,85 +109,54 @@ defmodule Assertions.AbsintheTest do
   describe "fields_for/2" do
     test "allows you to set the level of nesting of child types" do
       expected = [
-        {:pets,
-         {
-           [
-             :name,
-             :__typename
-           ],
-           [
-             cat: [
-               :weight,
-               :favorite_toy,
-               :__typename
-             ],
-             dog: [
-               :__typename
-             ]
-           ]
-         }},
-        :name,
-        {:animals,
-         {[], [cat: [:weight, :name, :favorite_toy, :__typename], dog: [:name, :__typename]]}},
-        :__typename
-      ]
+           :__typename,
+           {:animals, {[], [cat: [:__typename, :weight, :favorite_toy, :name], dog: [:__typename, :name]]}},
+           {:pets, {[:__typename, :name], [cat: [:__typename, :weight, :favorite_toy], dog: [:__typename]]}},
+           :name
+         ]
 
       assert_lists_equal(fields_for(:person, 2), expected)
 
       expected = [
-        {:owner,
-         [
-           {:pets,
-            {[:name, :__typename],
-             [
-               cat: [:weight, :favorite_toy, :__typename],
-               dog: [
-                 {:owner,
-                  [
-                    {:pets,
-                     {[:name, :__typename],
-                      [cat: [:weight, :favorite_toy, :__typename], dog: [:__typename]]}},
-                    :name,
-                    {:animals,
-                     {[],
-                      [
-                        cat: [:weight, :name, :favorite_toy, :__typename],
-                        dog: [:name, :__typename]
-                      ]}},
-                    :__typename
-                  ]},
-                 :__typename
-               ]
-             ]}},
-           :name,
-           {:animals,
-            {[],
-             [
-               cat: [:weight, :name, :favorite_toy, :__typename],
-               dog: [
-                 {:owner,
-                  [
-                    {:pets,
-                     {[:name, :__typename],
-                      [cat: [:weight, :favorite_toy, :__typename], dog: [:__typename]]}},
-                    :name,
-                    {:animals,
-                     {[],
-                      [
-                        cat: [:weight, :name, :favorite_toy, :__typename],
-                        dog: [:name, :__typename]
-                      ]}},
-                    :__typename
-                  ]},
-                 :name,
-                 :__typename
-               ]
-             ]}},
-           :__typename
-         ]},
-        :name,
-        :__typename
-      ]
+           :__typename,
+           {:owner,
+            [
+              :__typename,
+              {:animals,
+               {[],
+                [
+                  cat: [:__typename, :weight, :favorite_toy, :name],
+                  dog: [
+                    :__typename,
+                    {:owner,
+                     [
+                       :__typename,
+                       {:animals, {[], [cat: [:__typename, :weight, :favorite_toy, :name], dog: [:__typename, :name]]}},
+                       {:pets, {[:__typename, :name], [cat: [:__typename, :weight, :favorite_toy], dog: [:__typename]]}},
+                       :name
+                     ]},
+                    :name
+                  ]
+                ]}},
+              {:pets,
+               {[:__typename, :name],
+                [
+                  cat: [:__typename, :weight, :favorite_toy],
+                  dog: [
+                    :__typename,
+                    {:owner,
+                     [
+                       :__typename,
+                       {:animals, {[], [cat: [:__typename, :weight, :favorite_toy, :name], dog: [:__typename, :name]]}},
+                       {:pets, {[:__typename, :name], [cat: [:__typename, :weight, :favorite_toy], dog: [:__typename]]}},
+                       :name
+                     ]}
+                  ]
+                ]}},
+              :name
+            ]},
+           :name
+         ]
 
       assert_lists_equal(fields_for(:dog, 5), expected)
     end
@@ -210,10 +165,10 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/1" do
     test "returns a properly formatted document that can be used as a query" do
       expected = """
-                  weight
-                  name
-                  favoriteToy
                   __typename
+                  weight
+                  favoriteToy
+                  name
       """
 
       assert document_for(:cat) == expected
@@ -223,44 +178,44 @@ defmodule Assertions.AbsintheTest do
   describe "document_for/2" do
     test "allows the user to set the level of nesting" do
       expected = """
+                  __typename
                   owner {
-                    pets {
-                      name
-                      __typename
+                    __typename
+                    animals {
                       ...on Cat {
+                        __typename
                         weight
                         favoriteToy
-                        __typename
+                        name
                       }
                       ...on Dog {
-                        owner {
-                          name
-                          __typename
-                        }
                         __typename
+                        owner {
+                          __typename
+                          name
+                        }
+                        name
+                      }
+                    }
+                    pets {
+                      __typename
+                      name
+                      ...on Cat {
+                        __typename
+                        weight
+                        favoriteToy
+                      }
+                      ...on Dog {
+                        __typename
+                        owner {
+                          __typename
+                          name
+                        }
                       }
                     }
                     name
-                    animals {
-                      ...on Cat {
-                        weight
-                        name
-                        favoriteToy
-                        __typename
-                      }
-                      ...on Dog {
-                        owner {
-                          name
-                          __typename
-                        }
-                        name
-                        __typename
-                      }
-                    }
-                    __typename
                   }
                   name
-                  __typename
       """
 
       assert document_for(:dog, 4) == expected
@@ -268,14 +223,14 @@ defmodule Assertions.AbsintheTest do
 
     test "works with interfaces with a single implementor" do
       expected = """
-                  name
                   __typename
+                  name
                   ...on Dog {
-                    owner {
-                      name
-                      __typename
-                    }
                     __typename
+                    owner {
+                      __typename
+                      name
+                    }
                   }
       """
 
@@ -285,43 +240,43 @@ defmodule Assertions.AbsintheTest do
     test "allows the user to give overrides for certain nodes" do
       expected = """
                   owner {
-                    pets({filter: {name: "NAME"}}) {
-                      name
-                      __typename
-                      ...on Cat {
-                        weight
-                        favoriteToy
-                        __typename
-                      }
-                      ...on Dog {
-                        owner {
-                          name
-                          __typename
-                        }
-                        __typename
-                      }
-                    }
-                    name
                     animals {
                       ...on Cat {
                         weight
+                        favoriteToy
+                        __typename
                         name
+                      }
+                      ...on Dog {
+                        owner {
+                          __typename
+                          name
+                        }
+                        __typename
+                        name
+                      }
+                    }
+                    pets({filter: {name: "NAME"}}) {
+                      __typename
+                      name
+                      ...on Cat {
+                        weight
                         favoriteToy
                         __typename
                       }
                       ...on Dog {
                         owner {
-                          name
                           __typename
+                          name
                         }
-                        name
                         __typename
                       }
                     }
                     __typename
+                    name
                   }
-                  name
                   __typename
+                  name
       """
 
       assert document_for(:dog, 4, owner: [pets: "pets({filter: {name: \"NAME\"}})"]) == expected
@@ -602,7 +557,7 @@ defmodule Assertions.AbsintheTest do
     rescue
       error in [ExUnit.AssertionError] ->
         assert Macro.to_string(error.left) ==
-                 "{:ok, %{data: %{\"dog\" => %{\"name\" => ^dog_type, \"__typename\" => \"Do\" <> _, \"owner\" => %{\"name\" => \"Na\" <> \"me\", \"__typename\" => \"Person\", \"pets\" => [%{\"__typename\" => ^dog_type, \"name\" => \"Miki\", \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}, %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}], \"animals\" => [%{\"__typename\" => \"Cat\", \"favoriteToy\" => nil, \"name\" => nil, \"weight\" => nil}]}}}}}"
+                 "{:ok,\n %{\n   data: %{\n     \"dog\" => %{\n       \"name\" => ^dog_type,\n       \"__typename\" => <<\"Do\", _::binary>>,\n       \"owner\" => %{\n         \"name\" => \"Name\",\n         \"__typename\" => \"Person\",\n         \"pets\" => [\n           %{\n             \"__typename\" => ^dog_type,\n             \"name\" => \"Miki\",\n             \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}\n           },\n           %{\"__typename\" => ^dog_type, \"owner\" => %{\"__typename\" => \"Person\", \"name\" => \"Name\"}}\n         ],\n         \"animals\" => [\n           %{\"__typename\" => \"Cat\", \"favoriteToy\" => nil, \"name\" => nil, \"weight\" => nil}\n         ]\n       }\n     }\n   }\n }}"
 
         assert error.right ==
                  {:ok,
