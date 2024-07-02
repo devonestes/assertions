@@ -483,7 +483,6 @@ defmodule Assertions do
         left = Map.take(left, keys)
         right = Map.take(right, keys)
         message = "Values for #{unquote(stringify_list(keys_or_comparison))} not equal!"
-        message = "Values for #{} not equal!"
         {left_diff, right_diff, equal?} = Comparisons.compare_maps(left, right)
         {left_diff, right_diff, equal?, message}
       end
