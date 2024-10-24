@@ -6,7 +6,7 @@ Add `assertions` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
-  [{:assertions, "~> 0.10", only: :test}]
+  [{:assertions, "~> 0.20", only: :test}]
 end
 ```
 
