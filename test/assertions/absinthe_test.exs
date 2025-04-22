@@ -83,7 +83,7 @@ defmodule Assertions.AbsintheTest do
 
   describe "fields_for/1" do
     test "returns all fields for a single type" do
-      assert_lists_equal(fields_for(:cat), [:__typename, :favorite_toy, :name, :weight])
+      assert_lists_equal(fields_for(:cat), [:favorite_toy, :name, :__typename, :weight])
     end
 
     test "returns a tuple for object child types, default nesting of 3" do

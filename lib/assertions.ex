@@ -34,18 +34,17 @@ defmodule Assertions do
     expr = escape_quoted(:assert!, assertion)
     {args, value} = extract_args(assertion, __CALLER__)
 
-    quote do
-      left = unquote(left)
-      right = unquote(right)
-
-      if is_nil(left) or is_nil(right) do
+    if is_nil(left) or is_nil(right) do
+      quote do
         assert false,
-          left: left,
-          right: right,
+          left: unquote(left),
+          right: unquote(right),
           expr: unquote(expr),
           message:
             "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `assert!`"
-      else
+      end
+    else
+      quote do
         value = unquote(value)
 
         unless value == true do
@@ -100,27 +99,26 @@ defmodule Assertions do
     expr = escape_quoted(:refute!, assertion)
     {args, value} = extract_args(assertion, __CALLER__)
 
-    quote do
-      left = unquote(left)
-      right = unquote(right)
-
-      if is_nil(left) or is_nil(right) do
+    if is_nil(left) or is_nil(right) do
+      quote do
         raise ExUnit.AssertionError,
           args: unquote(args),
           expr: unquote(expr),
-          left: left,
-          right: right,
+          left: unquote(left),
+          right: unquote(right),
           message:
             "`nil` is not allowed as an argument to `#{unquote(operator)}` when using `refute!`"
-      else
+      end
+    else
+      quote do
         value = unquote(value)
 
         unless value == false do
           raise ExUnit.AssertionError,
             args: unquote(args),
             expr: unquote(expr),
-            left: left,
-            right: right,
+            left: unquote(left),
+            right: unquote(right),
             message: "Expected `false`, got #{inspect(value)}"
         end
 
@@ -415,12 +413,12 @@ defmodule Assertions do
         list = Enum.map(list, &Map.take(&1, keys))
 
         {struct in list,
-          "Struct matching the values for keys #{unquote(stringify_list(keys_or_comparison))} not found"}
+         "Struct matching the values for keys #{unquote(stringify_list(keys_or_comparison))} not found"}
       end
 
       negative = fn comparison ->
         {Enum.any?(list, &comparison.(struct, &1)),
-          "Struct not found in list using the given comparison"}
+         "Struct not found in list using the given comparison"}
       end
 
       {in_list?, message} =
@@ -829,7 +827,7 @@ defmodule Assertions do
               expr: unquote(assertion),
               message: "Received unexpected message: `#{inspect(random_thing)}`"
         after
-          timeout -> flunk(unquote(failure_message))
+          timeout -> unquote(failure_message)
         end
 
       true
