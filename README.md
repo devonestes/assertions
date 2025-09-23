@@ -125,7 +125,7 @@ But, with `assertions`, you can write that test like this:
 ```elixir
 defmodule UsersTest do
   use ExUnit.Case, async: true
-  import Assertions, only: [assert_lists_equal: 2]
+  import Assertions, only: [assert_lists_equal: 2, assert_structs_equal: 3]
 
   describe "update_all/2" do
     test "updates the given users in the database and returns those updated users" do
